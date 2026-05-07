@@ -150,8 +150,12 @@ const ListTemplatesService = async ({ companyId, whatsappId }: Request): Promise
       data: allTemplates
     };
   } catch (error: any) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    const apiError = error.response?.data?.message || error.response?.data?.error?.message || error.message;
     console.error("Erro ao buscar templates:", error.response?.data || error.message);
-    throw new AppError(`Erro ao buscar templates: ${error.response?.data?.message || error.message}`, 500);
+    throw new AppError(`Erro ao buscar templates: ${apiError}`, 500);
   }
 };
 

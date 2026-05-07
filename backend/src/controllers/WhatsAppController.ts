@@ -446,7 +446,7 @@ export const update = async (
         whatsappOficial
       );
     } catch (error) {
-      logger.info("ERROR", error);
+      logger.warn(`[WhatsApp UPDATE] Falha ao sincronizar conexão ID ${whatsapp.waba_webhook_id} com api_oficial: ${error.message}`);
     }
   }
 

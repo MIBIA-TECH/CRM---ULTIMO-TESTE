@@ -398,7 +398,8 @@ export class ReceibedWhatsAppService {
             await ticket.update({
                 lastMessage: message.type === "contacts" ? "Contato" : !!message?.text ? message?.text : '',
                 unreadMessages: Sequelize.literal('"unreadMessages" + 1') as any,
-                fromMe: false
+                fromMe: false,
+                imported: null
             })
 
             // ✅ CORREÇÃO CRÍTICA: Envolver verifyMessageOficial em try/catch para evitar perda silenciosa de mensagens

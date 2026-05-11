@@ -4211,7 +4211,8 @@ const handleMessage = async (
     // Atualiza o ticket se a ultima mensagem foi enviada por mim, para que possa ser finalizado.
     try {
       await ticket.update({
-        fromMe: msg.key.fromMe
+        fromMe: msg.key.fromMe,
+        ...(msg.key.fromMe ? {} : { imported: null })
       });
     } catch (e) {
       Sentry.captureException(e);

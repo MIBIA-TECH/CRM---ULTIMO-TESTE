@@ -1119,7 +1119,8 @@ const verifyQueueOficial = async (
                         text: formatBody(greetingMessage, ticket)
                     },
                     action: {
-                        sections
+                        sections,
+                        button: "Clique aqui para escolher uma opção"
                     }
                 } as IMetaMessageinteractive
                 console.log(JSON.stringify(buttonsData, null, 2))

@@ -60,6 +60,7 @@ import QuickMessageComponent from "./models/QuickMessageComponent";
 import SendWhatsAppOficialMessage from "./services/WhatsAppOficial/SendWhatsAppOficialMessage";
 import { IMetaMessageTemplate, IMetaMessageTemplateComponents, ISendMessageOficial } from "./libs/whatsAppOficial/IWhatsAppOficial.interfaces";
 import { sendMessageWhatsAppOficial } from "./libs/whatsAppOficial/whatsAppOficial.service";
+import SyncOfficialConnectionsService from "./services/WhatsAppOficial/SyncOfficialConnectionsService";
 
 const connection = process.env.REDIS_URI || "";
 const limiterMax = process.env.REDIS_OPT_LIMITER_MAX || 1;
@@ -298,6 +299,14 @@ async function handleVerifyReminders(job) {
     Sentry.captureException(e);
     logger.error(`SendReminder -> Verify: ${e.message}`);
     logger.error(`Stack: ${e.stack}`);
+  }
+}
+
+async function handleSyncWhatsAppOficial(job) {
+  try {
+    await SyncOfficialConnectionsService();
+  } catch (e: any) {
+    logger.error(`SyncWhatsAppOficial -> Error: ${e.message}`);
   }
 }
 
@@ -3676,6 +3685,7 @@ export async function startQueueProcess() {
 
   scheduleMonitor.process("Verify", handleVerifySchedules);
   scheduleMonitor.process("VerifyReminders", handleVerifyReminders);
+  scheduleMonitor.process("SyncWhatsAppOficial", handleSyncWhatsAppOficial);
 
   sendScheduledMessages.process("SendMessage", handleSendScheduledMessage);
   sendScheduledMessages.process("SendReminder", handleSendReminder);
@@ -3724,6 +3734,15 @@ export async function startQueueProcess() {
     {},
     {
       repeat: { cron: "0 * * * * *", key: "verify-reminders" },
+      removeOnComplete: true
+    }
+  );
+
+  scheduleMonitor.add(
+    "SyncWhatsAppOficial",
+    {},
+    {
+      repeat: { cron: "*/5 * * * *", key: "sync-whatsapp-oficial" },
       removeOnComplete: true
     }
   );

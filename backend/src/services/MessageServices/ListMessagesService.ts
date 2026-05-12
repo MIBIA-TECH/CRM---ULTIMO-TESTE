@@ -59,7 +59,6 @@ const ListMessagesService = async ({
     ticketIds = await Ticket.findAll({
       where:
       {
-        id: { [Op.lte]: ticket.id },
         companyId: ticket.companyId,
         contactId: ticket.contactId,
         whatsappId: ticket.whatsappId,
@@ -76,7 +75,6 @@ const ListMessagesService = async ({
     ticketIds = await Ticket.findAll({
       where:
       {
-        id: { [Op.lte]: ticket.id },
         companyId: ticket.companyId,
         contactId: ticket.contactId,
         whatsappId: ticket.whatsappId,

@@ -203,6 +203,11 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
   const ticket = await ShowTicketService(ticketId, companyId);
 
+  // BLOQUEIO: Impedir envio de mensagens em tickets fechados
+  if (ticket.status === "closed") {
+    throw new AppError("Este atendimento já foi encerrado. Por favor, envie a mensagem no atendimento ativo ou abra um novo atendimento.", 403);
+  }
+
   if (!ticket.whatsappId) {
     throw new AppError("Este ticket não possui conexão vinculada, provavelmente foi excluída a conexão.", 400);
   }
@@ -760,6 +765,11 @@ export const storeTemplate = async (req: Request, res: Response): Promise<Respon
   const { companyId } = req.user;
 
   const ticket = await ShowTicketService(ticketId, companyId);
+
+  // ✅ BLOQUEIO: Impedir envio de templates em tickets fechados
+  if (ticket.status === "closed") {
+    throw new AppError("Este atendimento já foi encerrado. Por favor, envie o template no atendimento ativo ou abra um novo atendimento.", 403);
+  }
 
   // ✅ CORREÇÃO: Se vier templateName, é template da Meta API (não buscar em QuickMessages)
   let template;

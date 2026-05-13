@@ -836,6 +836,7 @@ const TicketsManagerTabs = () => {
   </IconButton>
 </Badge>
 
+{/* Comentado - Botão "Fechar Todos"
 {user.profile === "admin" && (
   <Badge
     color="primary"
@@ -859,6 +860,7 @@ const TicketsManagerTabs = () => {
     </IconButton>
   </Badge>
 )}
+*/}
 {/* Botão "Abertos" */}
 <Badge
   invisible={

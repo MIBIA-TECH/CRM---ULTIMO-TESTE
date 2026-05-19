@@ -1,6 +1,5 @@
 {
   "name": "somos_teste_botao4",
-  "parameter_format": "NAMED",
   "components": [
     {
       "type": "BODY",
@@ -18,5 +17,6 @@
   "language": "pt_BR",
   "status": "APPROVED",
   "category": "MARKETING",
-  "id": "1263307765666277"
+  "id": "1263307765666277",
+  "parameter_format": "NAMED"
 }

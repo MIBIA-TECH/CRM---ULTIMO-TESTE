@@ -292,6 +292,9 @@ const Backup = () => {
             <Typography className={classes.infoText}>
               {i18n.t("backup.generate.description")}
             </Typography>
+            <Typography variant="body2" style={{ color: "#e65100", marginBottom: 12 }}>
+              {i18n.t("backup.generate.limitWarning")}
+            </Typography>
 
             <Grid container spacing={3} alignItems="center">
               <Grid item xs={12} sm={4} md={3}>

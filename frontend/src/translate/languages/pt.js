@@ -1456,6 +1456,7 @@ const messages = {
         generate: {
           title: "Gerar Backup Sob Demanda",
           description: "Selecione o período desejado para gerar um backup das mensagens WhatsApp e Chat Interno em formato CSV.",
+          limitWarning: "⚠ O período selecionado não pode ultrapassar 30 dias. Para períodos maiores, gere múltiplos backups.",
           dateFrom: "Data Inicial",
           dateTo: "Data Final",
           button: "Gerar Backup",

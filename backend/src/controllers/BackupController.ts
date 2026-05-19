@@ -111,6 +111,22 @@ export const generate = async (req: Request, res: Response): Promise<Response> =
   const { companyId } = req.user;
   const { dateFrom, dateTo } = req.body;
 
+  if (!dateFrom || !dateTo) {
+    throw new AppError("Data inicial e data final são obrigatórias", 400);
+  }
+
+  const from = new Date(dateFrom);
+  const to = new Date(dateTo);
+  const diffDays = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays > 30) {
+    throw new AppError("O período selecionado não pode ultrapassar 30 dias. Selecione um período menor.", 400);
+  }
+
+  if (diffDays < 0) {
+    throw new AppError("A data inicial deve ser anterior à data final", 400);
+  }
+
   try {
     const files = await GenerateBackupService({
       companyId,

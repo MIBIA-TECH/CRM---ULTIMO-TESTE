@@ -1403,6 +1403,7 @@ const messages = {
         generate: {
           title: "Generate On-Demand Backup",
           description: "Select the desired period to generate a backup of WhatsApp and Internal Chat messages in CSV format.",
+          limitWarning: "⚠ The selected period cannot exceed 30 days. For longer periods, generate multiple backups.",
           dateFrom: "Start Date",
           dateTo: "End Date",
           button: "Generate Backup",

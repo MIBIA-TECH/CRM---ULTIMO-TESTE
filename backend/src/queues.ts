@@ -2202,8 +2202,33 @@ async function buildCampaignTemplateData(
   let bodyToSave = '';
 
   const bodyComponent = templateComponents?.find(c => c.type === 'BODY');
+  const headerComponent = templateComponents?.find(c => c.type === 'HEADER');
+
   if (bodyComponent && bodyComponent.text) {
     bodyToSave = bodyComponent.text;
+    if (campaign.templateVariables) {
+      try {
+        const variables = JSON.parse(campaign.templateVariables);
+        const bodyVars = variables['body'];
+        if (bodyVars) {
+          if (Array.isArray(bodyVars)) {
+            bodyVars.forEach((variable, index) => {
+              const placeholder = `{{${index + 1}}}`;
+              const value = getProcessedMessage(variable?.value || '', variables, contactObj);
+              bodyToSave = bodyToSave.replace(placeholder, value);
+            });
+          } else if (typeof bodyVars === 'object') {
+            Object.keys(bodyVars).forEach((key, index) => {
+              const placeholder = `{{${index + 1}}}`;
+              const value = getProcessedMessage(bodyVars[key]?.value || '', variables, contactObj);
+              bodyToSave = bodyToSave.replace(placeholder, value);
+            });
+          }
+        }
+      } catch (err: any) {
+        logger.error(`[CAMPAIGN-TEMPLATE] Error parsing template variables for body: ${err.message}`);
+      }
+    }
   }
 
   if (!bodyToSave && campaignShipping.message && campaignShipping.message.trim() !== '') {
@@ -2211,9 +2236,69 @@ async function buildCampaignTemplateData(
   }
 
   if (!bodyToSave) {
-    const headerComponent = templateComponents?.find(c => c.type === 'HEADER');
     if (headerComponent && headerComponent.text) {
       bodyToSave = headerComponent.text;
+      if (campaign.templateVariables) {
+        try {
+          const variables = JSON.parse(campaign.templateVariables);
+          const headerVars = variables['header'];
+          if (headerVars) {
+            if (Array.isArray(headerVars)) {
+              headerVars.forEach((variable, index) => {
+                const placeholder = `{{${index + 1}}}`;
+                const value = getProcessedMessage(variable?.value || '', variables, contactObj);
+                bodyToSave = bodyToSave.replace(placeholder, value);
+              });
+            } else if (typeof headerVars === 'object') {
+              Object.keys(headerVars).forEach((key, index) => {
+                const placeholder = `{{${index + 1}}}`;
+                const value = getProcessedMessage(headerVars[key]?.value || '', variables, contactObj);
+                bodyToSave = bodyToSave.replace(placeholder, value);
+              });
+            }
+          }
+        } catch (err: any) {
+          logger.error(`[CAMPAIGN-TEMPLATE] Error parsing template variables for header: ${err.message}`);
+        }
+      }
+    }
+  }
+
+  // Prepend media URL if HEADER has format IMAGE, VIDEO, or DOCUMENT
+  if (headerComponent && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(headerComponent.format)) {
+    let mediaUrl = '';
+    if (campaign.templateVariables) {
+      try {
+        const variables = JSON.parse(campaign.templateVariables);
+        const headerVars = variables['header'];
+        if (headerVars) {
+          if (Array.isArray(headerVars) && headerVars[0]) {
+            mediaUrl = getProcessedMessage(headerVars[0]?.value || '', variables, contactObj);
+          } else if (typeof headerVars === 'object') {
+            const firstKey = Object.keys(headerVars)[0];
+            if (firstKey !== undefined) {
+              mediaUrl = getProcessedMessage(headerVars[firstKey]?.value || '', variables, contactObj);
+            }
+          }
+        }
+      } catch (err: any) {
+        logger.error(`[CAMPAIGN-TEMPLATE] Error parsing template variables for header media: ${err.message}`);
+      }
+    }
+
+    if (!mediaUrl && headerComponent.example) {
+      const example = headerComponent.example;
+      if (typeof example.default_media_url === 'string' && example.default_media_url.trim() !== '') {
+        mediaUrl = example.default_media_url.trim();
+      } else if (Array.isArray(example.header_handle) && example.header_handle[0]) {
+        mediaUrl = example.header_handle[0];
+      } else if (typeof example.header_handle === 'string') {
+        mediaUrl = example.header_handle;
+      }
+    }
+
+    if (mediaUrl && mediaUrl.startsWith('http')) {
+      bodyToSave = `${mediaUrl} \n ${bodyToSave}`;
     }
   }
 

@@ -19,7 +19,7 @@ const useStyles = makeStyles((theme) => ({
 
 const Template = ({ message }) => {
   const classes = useStyles();
-  const urlRegex = /(https?:\/\/[^\s]+(\.jpg|\.jpeg|\.png|\.gif|\.mp4|\.webm|\.ogg))/g;
+  const urlRegex = /(https?:\/\/[^\s]+?\.(jpeg|jpg|gif|png|mp4|webm|ogg)(?:\?[^\s]*)?)/gi;
 
   // Separar a parte do texto dos botões usando '||||'
   const [text, buttonsJson] = message.body.split('||||');
@@ -32,8 +32,8 @@ const Template = ({ message }) => {
   const textWithoutMediaUrl = text.replace(urlRegex, '').trim();
 
   // Funções para verificar se é uma imagem ou vídeo
-  const isImage = (url) => /\.(jpeg|jpg|gif|png)$/i.test(url);
-  const isVideo = (url) => /\.(mp4|webm|ogg)$/i.test(url);
+  const isImage = (url) => /\.(jpeg|jpg|gif|png)($|\?)/i.test(url);
+  const isVideo = (url) => /\.(mp4|webm|ogg)($|\?)/i.test(url);
 
   const ButtonRenderer = ({ buttons }) => {
     return (

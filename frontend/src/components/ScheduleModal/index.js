@@ -1238,9 +1238,9 @@ if (!scheduleData.templateName && scheduleData.isTemplate) {
                         <MenuItem value={"enabled"}>
                           {i18n.t("campaigns.dialog.form.enabledOpenTicket")}
                         </MenuItem>
-                        <MenuItem value={"disabled"}>
+                        {/* <MenuItem value={"disabled"}>
                           {i18n.t("campaigns.dialog.form.disabledOpenTicket")}
-                        </MenuItem>
+                        </MenuItem> */}
                       </Field>
                     </FormControl>
                   </Grid>

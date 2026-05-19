@@ -178,7 +178,7 @@ const CampaignModal = ({
     tagListId: "Nenhuma",
     companyId,
     statusTicket: "closed",
-    openTicket: "disabled",
+    openTicket: "enabled",
     // Novos campos de recorrência
     isRecurring: false,
     recurrenceType: "",
@@ -1148,7 +1148,7 @@ const handleSaveCampaign = async (values) => {
                         disabled={!campaignEditable}
                       >
                         <MenuItem value={"enabled"}>{i18n.t("campaigns.dialog.form.enabledOpenTicket")}</MenuItem>
-                        <MenuItem value={"disabled"}>{i18n.t("campaigns.dialog.form.disabledOpenTicket")}</MenuItem>
+                        {/* <MenuItem value={"disabled"}>{i18n.t("campaigns.dialog.form.disabledOpenTicket")}</MenuItem> */}
                       </Field>
                     </FormControl>
                   </Grid>

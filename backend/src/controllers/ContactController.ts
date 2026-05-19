@@ -256,12 +256,16 @@ export const getContact = async (
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const {companyId} = req.user;
   const newContact: ContactData = req.body;
-  newContact.number = newContact.number.replace("-", "").replace(" ", "");
+  newContact.number = newContact.number.replace(/[+\s-]/g, "");
 
   const schema = Yup.object().shape({
     name: Yup.string().required(),
     number: Yup.string()
       .required()
+      .test("is-brazil-phone", "O número deve iniciar com o código +55 (DDI Brasil).", (value) => {
+        if (!value) return false;
+        return value.startsWith("55");
+      })
       .matches(/^\d+$/, "Invalid number format. Only numbers are allowed."),
     email: Yup.string().email("Invalid email"),
     birthDate: Yup.date()
@@ -316,9 +320,23 @@ export const update = async (
   const {companyId} = req.user;
   const {contactId} = req.params;
 
+  if (contactData.number) {
+    contactData.number = contactData.number.replace(/[+\s-]/g, "");
+  }
+
+  const oldContact = await ShowContactService(contactId, companyId);
+  const isGroup = oldContact.isGroup || (oldContact.remoteJid && oldContact.remoteJid.endsWith("@g.us"));
+
   const schema = Yup.object().shape({
     name: Yup.string(),
-    number: Yup.string().matches(/^\d+(@lid)?$/, "ERR_CHECK_NUMBER"),
+    number: Yup.string()
+      .test("is-brazil-phone", "O número deve iniciar com o código +55 (DDI Brasil).", (value) => {
+        if (!value) return true;
+        if (isGroup) return true;
+        const checkVal = value.includes("@lid") ? value.split("@")[0] : value;
+        return checkVal.startsWith("55");
+      })
+      .matches(/^\d+(@lid)?$/, "ERR_CHECK_NUMBER"),
     email: Yup.string().email("Invalid email"),
     birthDate: Yup.date()
       .nullable()
@@ -337,13 +355,11 @@ export const update = async (
     throw new AppError(err.message);
   }
 
-  if (!contactData.isGroup && contactData.number.match(/^\d+$/)) {
+  if (!isGroup && contactData.number && contactData.number.match(/^\d+$/)) {
     const validNumber = await CheckContactNumber(contactData.number, companyId);
     const number = validNumber.jid.replace(/\D/g, "");
     contactData.number = number;
   }
-
-  const oldContact = await ShowContactService(contactId, companyId);
 
   if (
     contactData.number &&

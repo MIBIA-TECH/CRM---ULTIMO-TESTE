@@ -84,7 +84,15 @@ const ContactSchema = Yup.object().shape({
 		.min(2, "Too Short!")
 		.max(250, "Too Long!")
 		.required("Required"),
-	number: Yup.string().min(8, "Too Short!").max(50, "Too Long!"),
+	number: Yup.string()
+		.min(8, "Too Short!")
+		.max(50, "Too Long!")
+		.required("Required")
+		.test("is-brazil-phone", "O número deve iniciar com o código +55 (DDI Brasil).", (value) => {
+			if (!value) return true;
+			const cleanVal = value.replace(/[+\s-]/g, "");
+			return cleanVal.startsWith("55");
+		}),
 	email: Yup.string().email("Invalid email"),
 	empresa: Yup.string().max(100, "Too Long!"),
 	cpf: Yup.string().max(20, "Too Long!"),
@@ -210,9 +218,11 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 
 	const handleSaveContact = async values => {
 		try {
+		  const cleanedNumber = values.number ? values.number.replace(/[+\s-]/g, "") : "";
 		  // Preparar os dados com a data corretamente formatada
 		  const contactData = {
 			...values,
+			number: cleanedNumber,
 			disableBot: disableBot,
 			birthDate: parseDateFromInput(values.birthDate)
 		  };

@@ -10,6 +10,7 @@ import BullQueue from './libs/queue';
 
 import { startQueueProcess } from "./queues";
 import { startLidSyncJob } from "./jobs/LidSyncJob";
+import { startMessageBackupJob } from "./jobs/MessageBackupJob";
 import { ScheduledMessagesJob, ScheduleMessagesGenerateJob, ScheduleMessagesEnvioJob, ScheduleMessagesEnvioForaHorarioJob } from "./wbotScheduledMessages";
 import { rabbitMQListener } from "./services/RabbitMQService/RabbitMQListener";
 
@@ -37,6 +38,9 @@ const server = app.listen(process.env.PORT, async () => {
   // Iniciar job de sincronização de LIDs
   // Iniciar job de sincronização de LIDs
   startLidSyncJob();
+
+  // Iniciar job de backup de mensagens
+  startMessageBackupJob();
 
   // Iniciar listener do RabbitMQ para Webhooks da API Oficial
   rabbitMQListener.connect();

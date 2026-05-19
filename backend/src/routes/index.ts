@@ -47,6 +47,7 @@ import flowDefaultRoutes from "./flowDefaultRoutes";
 import flowBuilder from "./flowBuilderRoutes";
 import flowCampaignRoutes from "./flowCampaignRoutes";
 import templateRoutes from "./templateRoutes";
+import backupRoutes from "./backupRoutes";
 
 import ChatController from "../controllers/ChatController";
 
@@ -100,6 +101,7 @@ routes.use(flowDefaultRoutes);
 routes.use(flowBuilder);
 routes.use(flowCampaignRoutes);
 routes.use(templateRoutes);
+routes.use(backupRoutes);
 
 routes.post("/chats/backfill", ChatController.backfillChats);
 

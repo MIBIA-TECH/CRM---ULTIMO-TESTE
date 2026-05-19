@@ -44,7 +44,8 @@ import {
   ChevronUp,
   ChevronDown,
   LogOut,
-  Cpu
+  Cpu,
+  Archive
 } from "lucide-react";
 
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
@@ -407,7 +408,8 @@ const MainListItems = ({ collapsed, drawerClose }) => {
     location.pathname === "/files" ||
     location.pathname === "/financeiro" ||
     location.pathname === "/settings" ||
-    location.pathname === "/companies";
+    location.pathname === "/companies" ||
+    location.pathname === "/backup";
 
   useEffect(() => {
     if (location.pathname.startsWith("/tickets")) {
@@ -1090,6 +1092,20 @@ useEffect(() => {
                 collapsed={collapsed}
               />
             )}
+            <Can
+              role={user.profile}
+              perform="dashboard:view"
+              yes={() => (
+                <ListItemLink
+                  to="/backup"
+                  primary={i18n.t("mainDrawer.listItems.backup")}
+                  icon={<LucideIcon icon={Archive} />}
+                  tooltip={collapsed}
+                  isSubItem={true}
+                  collapsed={collapsed}
+                />
+              )}
+            />
               </List>
             </Collapse>
           </>

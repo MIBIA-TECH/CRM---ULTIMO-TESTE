@@ -44,12 +44,13 @@ import ToDoList from "../pages/ToDoList/";
 import Kanban from "../pages/Kanban";
 import TagsKanban from "../pages/TagsKanban";
 import BirthdaySettingsPage from "../pages/BirthdaySettings";
+import Backup from "../pages/Backup";
+import Templates from "../pages/Templates";
 
 import { FlowBuilderConfig } from "../pages/FlowBuilderConfig";
 import FlowBuilder from "../pages/FlowBuilder";
 import FlowDefault from "../pages/FlowDefault";
 import CampaignsPhrase from "../pages/CampaignsPhrase";
-import Templates from "../pages/Templates";
 
 const Routes = () => {
   const [showCampaigns, setShowCampaigns] = useState(false);
@@ -173,6 +174,7 @@ const Routes = () => {
                 />
                 <Route exact path="/chats/:id?" component={Chat} isPrivate />
                 <Route exact path="/files" component={Files} isPrivate />
+                <Route exact path="/backup" component={Backup} isPrivate />
                 <Route
                   exact
                   path="/moments"

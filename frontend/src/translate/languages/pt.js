@@ -993,6 +993,7 @@ const messages = {
           allConnections: "Gerenciar conexões",
           reports: "Relatórios",
           management: "Gerência",
+          backup: "Backup de Mensagens",
         },
         appBar: {
           user: {
@@ -1424,6 +1425,42 @@ const messages = {
           onlyRated: "Apenas Avaliados",
         },
         searchPlaceholder: "Pesquisar...",
+      },
+      backup: {
+        title: "Backup de Mensagens",
+        empty: "Nenhum backup disponível",
+        emptyHint: "Os backups são gerados automaticamente todos os dias às 02:00 e mantidos por 15 dias.",
+        tabs: {
+          automatic: "Backups Automáticos",
+          generate: "Gerar Backup",
+        },
+        table: {
+          type: "Tipo",
+          date: "Data",
+          filename: "Arquivo",
+          size: "Tamanho",
+          actions: "Ações",
+        },
+        buttons: {
+          refresh: "Atualizar",
+          download: "Download",
+          delete: "Excluir",
+        },
+        toasts: {
+          deleted: "Backup excluído com sucesso!",
+        },
+        deleteModal: {
+          title: "Excluir Backup",
+          message: "Tem certeza que deseja excluir este arquivo de backup? Esta ação não pode ser desfeita.",
+        },
+        generate: {
+          title: "Gerar Backup Sob Demanda",
+          description: "Selecione o período desejado para gerar um backup das mensagens WhatsApp e Chat Interno em formato CSV.",
+          dateFrom: "Data Inicial",
+          dateTo: "Data Final",
+          button: "Gerar Backup",
+          generating: "Gerando...",
+        },
       },
       queueIntegration: {
         title: "Integrações",

@@ -738,34 +738,40 @@ const handleSaveCampaign = async (values) => {
                   </Grid>
 
                   <Grid xs={12} md={4} item>
-                    <FormControl
+                    <Autocomplete
                       variant="outlined"
                       margin="dense"
-                      fullWidth
                       className={classes.formControl}
-                    >
-                      <InputLabel id="contactList-selection-label">
-                        {i18n.t("campaigns.dialog.form.contactList")}
-                      </InputLabel>
-                      <Field
-                        as={Select}
-                        label={i18n.t("campaigns.dialog.form.contactList")}
-                        placeholder={i18n.t("campaigns.dialog.form.contactList")}
-                        labelId="contactList-selection-label"
-                        id="contactListId"
-                        name="contactListId"
-                        error={touched.contactListId && Boolean(errors.contactListId)}
-                        disabled={!campaignEditable}
-                      >
-                        <MenuItem value="">Nenhuma</MenuItem>
-                        {contactLists &&
-                          contactLists.map((contactList) => (
-                            <MenuItem key={contactList.id} value={contactList.id}>
-                              {contactList.name}
-                            </MenuItem>
-                          ))}
-                      </Field>
-                    </FormControl>
+                      getOptionLabel={(option) => option.name || "Nenhuma"}
+                      getOptionSelected={(option, value) => option.id === value.id}
+                      value={
+                        values.contactListId === null
+                          ? null
+                          : values.contactListId === "" 
+                            ? { id: "", name: "Nenhuma" } 
+                            : contactLists.find(c => c.id === values.contactListId) || null
+                      }
+                      onChange={(e, newValue) => {
+                        const val = newValue ? newValue.id : null;
+                        setFieldValue("contactListId", val);
+                      }}
+                      options={[{ id: "", name: "Nenhuma" }, ...(contactLists || [])]}
+                      filterOptions={filterOptions}
+                      fullWidth
+                      autoHighlight
+                      disabled={!campaignEditable}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label={i18n.t("campaigns.dialog.form.contactList")}
+                          placeholder={i18n.t("campaigns.dialog.form.contactList")}
+                          variant="outlined"
+                          margin="dense"
+                          error={touched.contactListId && Boolean(errors.contactListId)}
+                          helperText={touched.contactListId && errors.contactListId}
+                        />
+                      )}
+                    />
                   </Grid>
 
                   <Grid xs={12} md={4} item>

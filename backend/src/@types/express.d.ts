@@ -5,6 +5,7 @@ declare namespace Express {
       profile: string; 
       companyId: number;
       showTemplates: string;
+      allUserChat: string;
     };
   }
 }

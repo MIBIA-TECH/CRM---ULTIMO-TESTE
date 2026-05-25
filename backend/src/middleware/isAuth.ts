@@ -46,7 +46,8 @@ const isAuth = async (req: Request, res: Response, next: NextFunction): Promise<
       id,
       profile,
       companyId,
-      showTemplates: user.showTemplates || "disabled"
+      showTemplates: user.showTemplates || "disabled",
+      allUserChat: user.allUserChat || "disabled"
     };
   } catch (err: any) {
     if (err.message === "ERR_SESSION_EXPIRED" && err.statusCode === 401) {

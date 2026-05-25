@@ -205,6 +205,7 @@ const UpdateUserService = async ({
     profileImage: user.profileImage,
     showFlow: user.showFlow,
     showTemplates: user.showTemplates, // ✅ ADICIONAR NO OBJETO RETORNADO
+    allUserChat: user.allUserChat,
     finalizacaoComValorVendaAtiva: user.finalizacaoComValorVendaAtiva,
     birthDate: user.birthDate,
     allowSeeMessagesInPendingTickets: user.allowSeeMessagesInPendingTickets

@@ -165,7 +165,7 @@ const ListTicketsService = async ({
         if (status === "chatbot") {
           // Para status chatbot, mostrar tickets que estão sendo processados pelo flowbuilder
           // Admins podem ver todos, usuários comuns só os seus ou os sem responsável
-          if (user.profile === "admin" || showAll === "true") {
+          if (user.profile === "admin" || showAll === "true" || user.allUserChat === "enabled") {
             whereCondition = {
               companyId,
               status: "chatbot",
@@ -248,7 +248,7 @@ const ListTicketsService = async ({
         status: "closed",
       }
 
-      if (showAll === "false" && user.profile === "admin") {
+      if (showAll === "false" && (user.profile === "admin" || user.allUserChat === "enabled")) {
         whereCondition2 = {
           ...whereCondition2,
           queueId: queueIds,
@@ -307,7 +307,7 @@ const ListTicketsService = async ({
         companyId
       }
       let latestTickets;
-      if (!showTicketAllQueues && user.profile === "user") {
+      if (!showTicketAllQueues && user.profile === "user" && user.allUserChat !== "enabled") {
         latestTickets = await Ticket.findAll({
           attributes: ['companyId', 'contactId', 'whatsappId', [literal('MAX("id")'), 'id']],
           where: {
@@ -323,13 +323,13 @@ const ListTicketsService = async ({
           [Op.or]: [{ userId }, { status: ["pending", "closed", "group", "chatbot"] }] // INCLUINDO CHATBOT NA BUSCA
         }
 
-        if (showAll === "false" && user.profile === "admin") {
+        if (showAll === "false" && (user.profile === "admin" || user.allUserChat === "enabled")) {
           whereCondition2 = {
             ...whereCondition2,
             queueId: queueIds,
           }
 
-        } else if (showAll === "true" && user.profile === "admin") {
+        } else if (showAll === "true" && (user.profile === "admin" || user.allUserChat === "enabled")) {
           whereCondition2 = {
             companyId,
             queueId: { [Op.or]: [queueIds, null] },

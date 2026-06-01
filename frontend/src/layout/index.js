@@ -481,7 +481,10 @@ const LoggedInLayout = ({ children, themeToggle }) => {
     if (user.defaultTheme === "dark" && theme.mode === "light") {
       colorMode.toggleColorMode();
     }
-  }, [user.defaultMenu, document.body.offsetWidth]);
+    if (user.defaultTheme === "light" && theme.mode === "dark") {
+      colorMode.toggleColorMode();
+    }
+  }, [user.defaultMenu, user.defaultTheme, theme.mode, document.body.offsetWidth]);
 
   useEffect(() => {
     if (document.body.offsetWidth < 600) {

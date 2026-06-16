@@ -43,7 +43,7 @@ export const sendMessageWhatsAppOficial = async (
             headers: {
                 ...formData.getHeaders(),
             },
-            timeout: 30000, // 30s — evita bloqueio indefinido se api_oficial travar
+            timeout: 10000, // 10s — evita bloqueio indefinido se api_oficial travar
         });
 
         // Log da resposta

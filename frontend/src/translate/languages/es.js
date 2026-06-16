@@ -1787,6 +1787,8 @@ const messages = {
         ERR_WAPP_DOWNLOAD_MEDIA:
           "No se pudieron descargar los medios de WhatsApp. Verifique la página de conexiones.",
         ERR_INVALID_CREDENTIALS: "Error de autenticación. Vuelva a intentarlo.",
+        ERR_TOO_MANY_LOGIN_ATTEMPTS:
+          "Demasiados intentos de inicio de sesión fallidos. Acceso bloqueado por 15 minutos.",
         ERR_SENDING_WAPP_MSG:
           "Error al enviar el mensaje de WhatsApp. Verifique la página de conexiones.",
         ERR_DELETE_WAPP_MSG: "No se pudo borrar el mensaje de WhatsApp.",

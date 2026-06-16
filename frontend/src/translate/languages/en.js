@@ -1859,6 +1859,8 @@ const messages = {
         ERR_WAPP_DOWNLOAD_MEDIA:
           "Could not download media from WhatsApp. Check connections page.",
         ERR_INVALID_CREDENTIALS: "Authentication error. Please try again.",
+        ERR_TOO_MANY_LOGIN_ATTEMPTS:
+          "Too many incorrect login attempts. Access blocked for 15 minutes.",
         ERR_SENDING_WAPP_MSG:
           "Error sending WhatsApp message. Check connections page.",
         ERR_DELETE_WAPP_MSG: "Couldn't delete message from WhatsApp.",

@@ -889,6 +889,8 @@ const messages = {
         ERR_WAPP_DOWNLOAD_MEDIA:
           "Medya indirilemedi. Lütfen Bağlantı sayfasını kontrol edin.",
         ERR_INVALID_CREDENTIALS: "Doğrulama Hatası. Lütfen Tekrar deneyiniz.",
+        ERR_TOO_MANY_LOGIN_ATTEMPTS:
+          "Çok fazla başarısız giriş denemesi. Erişim 15 dakika boyunca engellendi.",
         ERR_SENDING_WAPP_MSG:
           "Mesaj gönderilirken hata oluştu. Lütfen Bağlantı sayfasını kontrol edin.",
         ERR_DELETE_WAPP_MSG: "Mesaj Silinemiyor!",

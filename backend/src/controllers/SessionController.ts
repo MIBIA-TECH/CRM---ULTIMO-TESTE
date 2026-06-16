@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 import { getIO } from "../libs/socket";
+import cache from "../libs/cache";
 
 import AuthUserService from "../services/UserServices/AuthUserService";
 import { SendRefreshToken } from "../helpers/SendRefreshToken";
@@ -11,33 +12,56 @@ import { SerializeUser } from "../helpers/SerializeUser";
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { email, password } = req.body;
+  const ip = req.ip || req.socket.remoteAddress;
 
-  const { token, serializedUser, refreshToken } = await AuthUserService({
-    email,
-    password
-  });
+  try {
+    const { token, serializedUser, refreshToken } = await AuthUserService({
+      email,
+      password
+    });
 
-  SendRefreshToken(res, refreshToken);
+    const emailKey = `login_attempts:email:${email}`;
+    const ipKey = `login_attempts:ip:${ip}`;
+    await cache.del(emailKey);
+    await cache.del(ipKey);
 
-  const io = getIO();
+    SendRefreshToken(res, refreshToken);
 
-  io.of(serializedUser.companyId.toString()).emit(
-    `company-${serializedUser.companyId}-auth`,
-    {
-      action: "update",
-      user: {
-        id: serializedUser.id,
-        email: serializedUser.email,
-        companyId: serializedUser.companyId,
-        token: serializedUser.token
+    const io = getIO();
+
+    io.of(serializedUser.companyId.toString()).emit(
+      `company-${serializedUser.companyId}-auth`,
+      {
+        action: "update",
+        user: {
+          id: serializedUser.id,
+          email: serializedUser.email,
+          companyId: serializedUser.companyId,
+          token: serializedUser.token
+        }
       }
-    }
-  );
+    );
 
-  return res.status(200).json({
-    token,
-    user: serializedUser
-  });
+    return res.status(200).json({
+      token,
+      user: serializedUser
+    });
+  } catch (err: any) {
+    if (err instanceof AppError && err.message === "ERR_INVALID_CREDENTIALS") {
+      const emailKey = `login_attempts:email:${email}`;
+      const ipKey = `login_attempts:ip:${ip}`;
+
+      const currentEmailAttempts = await cache.get(emailKey);
+      const currentIpAttempts = await cache.get(ipKey);
+
+      const newEmailAttempts = currentEmailAttempts ? Number(currentEmailAttempts) + 1 : 1;
+      const newIpAttempts = currentIpAttempts ? Number(currentIpAttempts) + 1 : 1;
+
+      await cache.set(emailKey, String(newEmailAttempts), "EX", 900);
+      await cache.set(ipKey, String(newIpAttempts), "EX", 900);
+    }
+    throw err;
+  }
 };
 
 export const update = async (

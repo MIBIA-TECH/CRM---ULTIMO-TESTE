@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 import { getIO } from "../libs/socket";
 import cache from "../libs/cache";
+import { getClientIp } from "../helpers/getClientIp";
 
 import AuthUserService from "../services/UserServices/AuthUserService";
 import { SendRefreshToken } from "../helpers/SendRefreshToken";
@@ -12,7 +13,7 @@ import { SerializeUser } from "../helpers/SerializeUser";
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { email, password } = req.body;
-  const ip = req.ip || req.socket.remoteAddress;
+  const ip = getClientIp(req);
 
   try {
     const { token, serializedUser, refreshToken } = await AuthUserService({

@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import cache from "../libs/cache";
 import AppError from "../errors/AppError";
+import { getClientIp } from "../helpers/getClientIp";
 
 const loginLimiter = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { email } = req.body;
-  const ip = req.ip || req.socket.remoteAddress;
+  const ip = getClientIp(req);
 
   if (!email) {
     return next();

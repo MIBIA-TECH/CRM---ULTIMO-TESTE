@@ -20,7 +20,9 @@ const useTickets = ({
   userFilter,
   sortTickets,
   searchOnMessages,
-  empresa
+  empresa,
+  dateStart,
+  dateEnd
 }) => {
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
@@ -49,7 +51,9 @@ const useTickets = ({
                 statusFilter,
                 sortTickets,
                 searchOnMessages,
-                empresa
+                empresa,
+                dateStart,
+                dateEnd
               },
             });
             
@@ -118,7 +122,9 @@ const useTickets = ({
     forceSearch,
     sortTickets,
     searchOnMessages,
-    empresa
+    empresa,
+    dateStart,
+    dateEnd
   ]);
 
   // Função para recarregar os dados sem mudar os parâmetros
@@ -142,7 +148,9 @@ const useTickets = ({
           userFilter,
           sortTickets,
           searchOnMessages,
-          empresa
+          empresa,
+          dateStart,
+          dateEnd
         }
       });
       setCount(data.count);
@@ -168,7 +176,9 @@ const useTickets = ({
     userFilter,
     sortTickets,
     searchOnMessages,
-    empresa
+    empresa,
+    dateStart,
+    dateEnd
   ]);
 
   return { tickets, loading, hasMore, count, refetch };

@@ -235,7 +235,9 @@ const TicketsListCustom = (props) => {
         statusFilter,
         userFilter,
         sortTickets,
-        empresa
+        empresa,
+        dateStart,
+        dateEnd
     } = props;
 
     const classes = useStyles();
@@ -254,7 +256,7 @@ const TicketsListCustom = (props) => {
     useEffect(() => {
         dispatch({ type: "RESET" });
         setPageNumber(1);
-    }, [status, searchParam, dispatch, showAll, tags, users, forceSearch, selectedQueueIds, whatsappIds, statusFilter, sortTickets, searchOnMessages, empresa]);
+    }, [status, searchParam, dispatch, showAll, tags, users, forceSearch, selectedQueueIds, whatsappIds, statusFilter, sortTickets, searchOnMessages, empresa, dateStart, dateEnd]);
 
     // Hook para carregar tickets e contador
     const { tickets, hasMore, loading, count, refetch } = useTickets({
@@ -270,7 +272,9 @@ const TicketsListCustom = (props) => {
         statusFilter: JSON.stringify(statusFilter),
         userFilter,
         sortTickets,
-        empresa
+        empresa,
+        dateStart,
+        dateEnd
     });
     
     // Função para atualizar contador diretamente do backend

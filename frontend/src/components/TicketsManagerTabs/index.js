@@ -424,6 +424,8 @@ const TicketsManagerTabs = () => {
   const [selectedStatus, setSelectedStatus] = useState([]);
   const [selectedEmpresa, setSelectedEmpresa] = useState("");
   const [empresaInput, setEmpresaInput] = useState("");
+  const [dateStart, setDateStart] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
   const [filter, setFilter] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [hoveredButton, setHoveredButton] = useState(null);
@@ -611,6 +613,38 @@ const TicketsManagerTabs = () => {
     }, 500);
   };
 
+  const handleSelectedDateStart = (value) => {
+    clearTimeout(searchTimeout);
+
+    setDateStart(value);
+
+    if (value === "") {
+      setForceSearch(!forceSearch);
+    } else if (tab !== "search" && tab !== "closed") {
+      setTab("search");
+    }
+
+    searchTimeout = setTimeout(() => {
+      setForceSearch(!forceSearch);
+    }, 500);
+  };
+
+  const handleSelectedDateEnd = (value) => {
+    clearTimeout(searchTimeout);
+
+    setDateEnd(value);
+
+    if (value === "") {
+      setForceSearch(!forceSearch);
+    } else if (tab !== "search" && tab !== "closed") {
+      setTab("search");
+    }
+
+    searchTimeout = setTimeout(() => {
+      setForceSearch(!forceSearch);
+    }, 500);
+  };
+
   const handleFilter = () => {
     if (filter) {
       setFilter(false);
@@ -622,6 +656,8 @@ const TicketsManagerTabs = () => {
       setSelectedStatus([]);
       setSelectedEmpresa("");
       setEmpresaInput("");
+      setDateStart("");
+      setDateEnd("");
       setForceSearch(!forceSearch);
       if (searchInputRef.current) {
         searchInputRef.current.value = "";
@@ -720,6 +756,32 @@ const TicketsManagerTabs = () => {
               placeholder={i18n.t("tickets.search.filterCompany")}
               value={empresaInput}
               onChange={(e) => handleSelectedEmpresa(e.target.value)}
+            />
+          </Box>
+          <Box style={{ display: 'flex', gap: '10px', padding: "0px 10px 10px" }}>
+            <TextField
+              label="Data Inicial"
+              type="date"
+              value={dateStart}
+              variant="outlined"
+              fullWidth
+              size="small"
+              onChange={(e) => handleSelectedDateStart(e.target.value)}
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
+            <TextField
+              label="Data Final"
+              type="date"
+              value={dateEnd}
+              variant="outlined"
+              fullWidth
+              size="small"
+              onChange={(e) => handleSelectedDateEnd(e.target.value)}
+              InputLabelProps={{
+                shrink: true,
+              }}
             />
           </Box>
         </>
@@ -1152,6 +1214,8 @@ const TicketsManagerTabs = () => {
           showAll={showAllTickets}
           selectedQueueIds={selectedQueueIds}
           setTabOpen={setTabOpen}
+          dateStart={dateStart}
+          dateEnd={dateEnd}
         />
       </TabPanel>
 
@@ -1170,6 +1234,8 @@ const TicketsManagerTabs = () => {
               forceSearch={forceSearch}
               searchOnMessages={searchOnMessages}
               status="search"
+              dateStart={dateStart}
+              dateEnd={dateEnd}
             />
           </>
         )}
@@ -1186,6 +1252,8 @@ const TicketsManagerTabs = () => {
             forceSearch={forceSearch}
             searchOnMessages={searchOnMessages}
             status="search"
+            dateStart={dateStart}
+            dateEnd={dateEnd}
           />
         )}
       </TabPanel>

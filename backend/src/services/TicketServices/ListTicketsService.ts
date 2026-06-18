@@ -85,7 +85,7 @@ const ListTicketsService = async ({
   const lastMessageAtOrderLiteral = literal(
     'COALESCE((SELECT MAX(m."createdAt") FROM "Messages" AS m WHERE m."ticketId" = "Ticket"."id" AND m."companyId" = "Ticket"."companyId"), "Ticket"."updatedAt")'
   );
-  let whereCondition: Filterable["where"];
+  let whereCondition: any;
 
   whereCondition = {
     [Op.or]: [{ userId }, { status: "pending" }],
@@ -243,7 +243,7 @@ const ListTicketsService = async ({
     let latestTickets;
 
     if (!showTicketAllQueues) {
-      let whereCondition2: Filterable["where"] = {
+      let whereCondition2: any = {
         companyId,
         status: "closed",
       }
@@ -259,6 +259,18 @@ const ListTicketsService = async ({
           ...whereCondition2,
           queueId: showAll === "true" || showTicketWithoutQueue ? { [Op.or]: [queueIds, null] } : queueIds,
         }
+      }
+
+      if (dateStart && dateEnd) {
+        whereCondition2 = {
+          ...whereCondition2,
+          updatedAt: {
+            [Op.between]: [
+              startOfDay(parseISO(dateStart)),
+              endOfDay(parseISO(dateEnd))
+            ]
+          }
+        };
       }
 
       latestTickets = await Ticket.findAll({
@@ -268,7 +280,7 @@ const ListTicketsService = async ({
       });
 
     } else {
-      let whereCondition2: Filterable["where"] = {
+      let whereCondition2: any = {
         companyId,
         status: "closed",
       }
@@ -284,6 +296,18 @@ const ListTicketsService = async ({
           ...whereCondition2,
           queueId: showAll === "true" || showTicketWithoutQueue ? { [Op.or]: [queueIds, null] } : queueIds,
         }
+      }
+
+      if (dateStart && dateEnd) {
+        whereCondition2 = {
+          ...whereCondition2,
+          updatedAt: {
+            [Op.between]: [
+              startOfDay(parseISO(dateStart)),
+              endOfDay(parseISO(dateEnd))
+            ]
+          }
+        };
       }
 
       latestTickets = await Ticket.findAll({
@@ -494,6 +518,21 @@ const ListTicketsService = async ({
     ...whereCondition,
     companyId
   };
+
+  if (dateStart && dateEnd && status !== "closed") {
+    const isFilteringClosed = statusFilters && statusFilters.includes("closed") && statusFilters.length === 1;
+    const dateField = isFilteringClosed ? "updatedAt" : "createdAt";
+
+    whereCondition = {
+      ...whereCondition,
+      [dateField]: {
+        [Op.between]: [
+          startOfDay(parseISO(dateStart)),
+          endOfDay(parseISO(dateEnd))
+        ]
+      }
+    };
+  }
 
   const limit = 40;
   const offset = limit * (+pageNumber - 1);

@@ -45,7 +45,7 @@ const AuthUserService = async ({
   password
 }: Request): Promise<Response> => {
   const user = await User.findOne({
-    where: { email },
+    where: { email: email.trim().toLowerCase() },
     include: [
       "queues",
       { model: Company, include: [{ model: CompaniesSettings }] }

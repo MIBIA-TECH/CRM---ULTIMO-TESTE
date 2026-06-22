@@ -11,7 +11,7 @@ const loginLimiter = async (req: Request, res: Response, next: NextFunction): Pr
     return next();
   }
 
-  const emailKey = `login_attempts:email:${email}`;
+  const emailKey = `login_attempts:email:${email.trim().toLowerCase()}`;
   const ipKey = `login_attempts:ip:${ip}`;
 
   const emailAttempts = await cache.get(emailKey);

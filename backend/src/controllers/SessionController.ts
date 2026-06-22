@@ -21,7 +21,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       password
     });
 
-    const emailKey = `login_attempts:email:${email}`;
+    const emailKey = `login_attempts:email:${email.trim().toLowerCase()}`;
     const ipKey = `login_attempts:ip:${ip}`;
     await cache.del(emailKey);
     await cache.del(ipKey);
@@ -49,7 +49,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     });
   } catch (err: any) {
     if (err instanceof AppError && err.message === "ERR_INVALID_CREDENTIALS") {
-      const emailKey = `login_attempts:email:${email}`;
+      const emailKey = `login_attempts:email:${email.trim().toLowerCase()}`;
       const ipKey = `login_attempts:ip:${ip}`;
 
       const currentEmailAttempts = await cache.get(emailKey);

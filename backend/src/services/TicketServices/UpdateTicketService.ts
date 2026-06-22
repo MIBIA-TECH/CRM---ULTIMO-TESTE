@@ -47,10 +47,10 @@ interface TicketData {
   motivoFinalizacao?: string;
   finalizadoComVenda?: boolean;
   flowWebhook?: boolean;
-  flowStopped?: boolean;
+  flowStopped?: string | boolean | null;
   dataWebhook?: any;
-  lastFlowId?: string;
-  hashFlowId?: string;
+  lastFlowId?: string | null;
+  hashFlowId?: string | null;
 }
 
 interface Request {
@@ -138,6 +138,12 @@ const UpdateTicketService = async ({
     const oldUserId = ticket.user?.id;
     const oldQueueId = ticket?.queueId;
 
+    let flowWebhook = ticketData.flowWebhook !== undefined ? ticketData.flowWebhook : ticket.flowWebhook;
+    let lastFlowId = ticketData.lastFlowId !== undefined ? ticketData.lastFlowId : ticket.lastFlowId;
+    let hashFlowId = ticketData.hashFlowId !== undefined ? ticketData.hashFlowId : ticket.hashFlowId;
+    let flowStopped = ticketData.flowStopped !== undefined ? (typeof ticketData.flowStopped === "boolean" ? (ticketData.flowStopped ? "true" : null) : ticketData.flowStopped) : ticket.flowStopped;
+    let dataWebhook = ticketData.dataWebhook !== undefined ? ticketData.dataWebhook : ticket.dataWebhook;
+
     if (isNil(ticket.whatsappId) && status === "closed") {
       await CreateLogTicketService({
         userId,
@@ -181,22 +187,21 @@ const UpdateTicketService = async ({
       isBot = false;
     }
 
-    // ✅ CORRIGIDO: Desabilitar integração quando ticket é aceito por um usuário
-    // ⚠️ IMPORTANTE: NÃO desabilitar isBot se ticket está em fluxo ativo (flowWebhook)
+    // ✅ CORRIGIDO: Desabilitar integração e encerrar fluxo do flowbuilder/robô quando ticket é aceito por um usuário
     if (userId && userId !== oldUserId && status === "open") {
-      logger.info(`[TICKET ACCEPTED] Ticket ${ticketId} aceito por usuário ${userId} - desabilitando integração`);
+      logger.info(`[TICKET ACCEPTED] Ticket ${ticketId} aceito por usuário ${userId} - desabilitando integração e limpando estado do flowbuilder`);
 
       await DeleteDialogChatBotsServices(ticket.contactId);
 
-      // Verificar se ticket está em fluxo ativo
-      if (ticket.flowWebhook && ticket.lastFlowId) {
-        logger.info(`[TICKET ACCEPTED] Ticket ${ticketId} está em fluxo ativo - mantendo isBot=true para continuar fluxo`);
-        // Manter isBot = true para continuar fluxo
-      } else {
-        isBot = false;
-      }
-
+      isBot = false;
       useIntegration = false; // Sempre desabilitar integrações externas (Typebot, n8n)
+
+      // Parar e limpar estado do Flowbuilder
+      flowWebhook = false;
+      lastFlowId = null;
+      hashFlowId = null;
+      flowStopped = null;
+      dataWebhook = null;
     }
 
     const ticketTraking = await FindOrCreateATicketTrakingService({
@@ -422,6 +427,8 @@ const UpdateTicketService = async ({
 
       await ticket.update({
         status: "closed",
+        flowWebhook: false,
+        flowStopped: null,
         lastFlowId: null,
         dataWebhook: null,
         hashFlowId: null,
@@ -956,7 +963,12 @@ const UpdateTicketService = async ({
       valorVenda,
       motivoNaoVenda,
       motivoFinalizacao,
-      finalizadoComVenda
+      finalizadoComVenda,
+      flowWebhook,
+      lastFlowId,
+      hashFlowId,
+      flowStopped,
+      dataWebhook
     });
 
     ticketTraking.queuedAt = moment().toDate();

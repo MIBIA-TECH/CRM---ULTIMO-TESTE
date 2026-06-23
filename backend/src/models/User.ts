@@ -217,6 +217,13 @@ class User extends Model<User> {
   @Column
   showTemplates: string;
 
+  @Default(false)
+  @Column
+  acceptedTerms: boolean;
+
+  @Column
+  acceptedTermsAt: Date;
+
   @BeforeDestroy
   static async updateChatbotsUsersReferences(user: User) {
     await Chatbot.update(

@@ -17,6 +17,7 @@ import ShowCompanyService from "../services/CompanyService/ShowCompanyService";
 import { getWbot } from "../libs/wbot";
 import FindCompaniesWhatsappService from "../services/CompanyService/FindCompaniesWhatsappService";
 import User from "../models/User";
+import AcceptTermsService from "../services/UserServices/AcceptTermsService";
 
 import { head } from "lodash";
 import ToggleChangeWidthService from "../services/UserServices/ToggleChangeWidthService";
@@ -446,6 +447,23 @@ export const getOnlineUsers = async (
   return res.status(200).json(users);
 };
 
+export const acceptTerms = async (req: Request, res: Response): Promise<Response> => {
+  const { id: userId, companyId } = req.user;
+
+  const user = await AcceptTermsService({
+    userId: +userId,
+    companyId: +companyId
+  });
+
+  const io = getIO();
+  io.of(String(companyId)).emit(`company-${companyId}-user`, {
+    action: "update",
+    user
+  });
+
+  return res.status(200).json(user);
+};
+
 export const validateCnpj = async (req: Request, res: Response): Promise<Response> => {
   const { cnpj } = req.body;
 
@@ -557,5 +575,6 @@ export default {
   toggleChangeWidht,
   updateOnlineStatus,
   getOnlineUsers,
-  validateCnpj
+  validateCnpj,
+  acceptTerms
 };

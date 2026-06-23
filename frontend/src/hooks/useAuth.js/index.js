@@ -283,6 +283,19 @@ Entre em contato com o Suporte para mais informações! `);
     }
   };
 
+  const handleAcceptTerms = async () => {
+    try {
+      const { data } = await api.post("/users/accept-terms");
+      setUser(prev => ({
+        ...prev,
+        acceptedTerms: true,
+        acceptedTermsAt: data.acceptedTermsAt
+      }));
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
   return {
     isAuth,
     user,
@@ -291,6 +304,7 @@ Entre em contato com o Suporte para mais informações! `);
     handleLogout,
     getCurrentUserInfo,
     socket,
+    handleAcceptTerms
   };
 };
 

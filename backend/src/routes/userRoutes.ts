@@ -15,6 +15,8 @@ userRoutes.get("/users/list", isAuth, UserController.list);
 
 userRoutes.post("/users", isAuth, UserController.store);
 
+userRoutes.post("/users/accept-terms", isAuth, UserController.acceptTerms);
+
 userRoutes.put("/users/:userId", isAuth, UserController.update);
 
 userRoutes.get("/users/:userId", isAuth, UserController.show);

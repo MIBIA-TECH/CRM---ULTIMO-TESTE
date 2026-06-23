@@ -45,7 +45,9 @@ const ShowUserService = async (
       "showTemplates",
       "finalizacaoComValorVendaAtiva",
       "birthDate",
-      "allowSeeMessagesInPendingTickets" // 
+      "allowSeeMessagesInPendingTickets",
+      "acceptedTerms",
+      "acceptedTermsAt"
     ],
     include: [
       { model: Queue, as: "queues", attributes: ["id", "name", "color"] },

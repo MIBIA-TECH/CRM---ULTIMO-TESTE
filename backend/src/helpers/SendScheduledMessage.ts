@@ -14,6 +14,7 @@ import { ISendMessageOficial } from "../libs/whatsAppOficial/IWhatsAppOficial.in
 import path from "path";
 import fs from "fs";
 import logger from "../utils/logger";
+import SafeCreateMessage from "./SafeCreateMessage";
 
 interface SendScheduledMessageParams {
   schedule: Schedule;
@@ -81,6 +82,8 @@ const SendScheduledMessage = async ({
 
       const normalizedNumber = contact.number.replace(/[^\d]/g, "");
       let payload: ISendMessageOficial;
+      let mediaType = "conversation";
+      let bodyTicket = messageBody;
 
       // ✅ Verificar se é um template
       if (schedule.isTemplate && schedule.templateMetaId) {
@@ -98,6 +101,8 @@ const SendScheduledMessage = async ({
             components: schedule.templateComponents || []
           }
         };
+        mediaType = "template";
+        bodyTicket = `📋 Template: ${templateName}`;
 
         logger.info(`✅ [SCHEDULE] Payload do template:`, JSON.stringify(payload, null, 2));
       } else {
@@ -148,15 +153,74 @@ const SendScheduledMessage = async ({
               fileName: schedule.mediaName,
               body_document: { caption: messageBody }
             };
+            mediaType = "document";
+            bodyTicket = "📂 Arquivo de Documento";
           }
         }
       }
 
-      await sendMessageWhatsAppOficial(
+      const sendMessage = await sendMessageWhatsAppOficial(
         mediaPath,
         whatsapp.token || whatsapp.send_token || whatsapp.tokenMeta,
         payload
       );
+
+      // Pegar ID oficial retornado
+      const getOfficialMessageId = (result: any): string | null => {
+        if (Array.isArray(result?.idMessageWhatsApp) && result.idMessageWhatsApp[0]) {
+          return result.idMessageWhatsApp[0];
+        }
+
+        if (Array.isArray(result?.messages) && result.messages[0]?.id) {
+          return result.messages[0].id;
+        }
+
+        return null;
+      };
+
+      const officialMessageId = getOfficialMessageId(sendMessage);
+
+      // Atualizar o ticket com a última mensagem
+      await ticket.update({
+        lastMessage: mediaType === "conversation" ? messageBody : bodyTicket,
+        imported: null,
+        unreadMessages: 0,
+        fromMe: true
+      });
+
+      const bodyToSave = mediaType === "conversation" ? messageBody : (schedule.body || bodyTicket);
+
+      const messageData = {
+        wid: officialMessageId,
+        ticketId: ticket.id,
+        contactId: contactData.id,
+        body: bodyToSave,
+        fromMe: true,
+        mediaType: mediaType,
+        mediaUrl: schedule.mediaPath ? schedule.mediaName : null,
+        read: true,
+        quotedMsgId: null,
+        ack: 1,
+        channel: 'whatsapp_oficial',
+        remoteJid: `${contactData.number}@s.whatsapp.net`,
+        participant: null,
+        dataJson: JSON.stringify(payload),
+        ticketTrakingId: null,
+        isPrivate: false,
+        createdAt: new Date().toISOString(),
+        ticketImported: ticket.imported,
+        isForwarded: false,
+        originalName: schedule.mediaName || null
+      };
+
+      logger.info(`[SCHEDULE OFFICIAL - SAVE] Salvando mensagem no banco - Ticket: ${ticket.id}`);
+
+      await SafeCreateMessage({
+        messageData,
+        companyId: ticket.companyId,
+        maxRetries: 3,
+        context: `SCHEDULE_OFICIAL_${ticket.id}`
+      });
 
     } else {
       // Envio via Baileys (WhatsApp não oficial)

@@ -523,6 +523,9 @@ const Campaigns = () => {
                       {i18n.t("campaigns.table.whatsapp")}
                     </TableCell>
                     <TableCell align="center" className={classes.tableHeader}>
+                      Criador
+                    </TableCell>
+                    <TableCell align="center" className={classes.tableHeader}>
                       {i18n.t("campaigns.table.scheduledAt")}
                     </TableCell>
                     <TableCell align="center" className={classes.tableHeader}>
@@ -593,6 +596,9 @@ const Campaigns = () => {
                           {campaign.whatsappId
                             ? campaign.whatsapp?.name || "WhatsApp removido"
                             : "Não definido"}
+                        </TableCell>
+                        <TableCell align="center">
+                          {campaign.user?.name || "Não identificado"}
                         </TableCell>
                         <TableCell align="center">
                           {campaign.scheduledAt
@@ -690,7 +696,7 @@ const Campaigns = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {loading && <TableRowSkeleton columns={10} />}
+                    {loading && <TableRowSkeleton columns={11} />}
                   </>
                 </TableBody>
               </Table>

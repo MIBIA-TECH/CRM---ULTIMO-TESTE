@@ -143,6 +143,11 @@ const CampaignSchema = Yup.object().shape({
     is: true,
     then: Yup.number().min(1, 'Número máximo deve ser maior que 0').nullable(),
     otherwise: Yup.number().nullable()
+  }),
+  statusTicket: Yup.string().when('openTicket', {
+    is: 'enabled',
+    then: Yup.string().required('Status é obrigatório'),
+    otherwise: Yup.string().nullable()
   })
 });
 
@@ -602,7 +607,7 @@ const handleSaveCampaign = async (values) => {
     );
   };
 
-  const renderConfirmationMessageField = (identifier) => {
+  /* const renderConfirmationMessageField = (identifier) => {
     return (
       <Field
         as={TextField}
@@ -618,7 +623,7 @@ const handleSaveCampaign = async (values) => {
         disabled={selectedTemplate || (!campaignEditable && campaign.status !== "CANCELADA")}
       />
     );
-  };
+  }; */
 
   const cancelCampaign = async () => {
     try {
@@ -685,6 +690,18 @@ const handleSaveCampaign = async (values) => {
           initialValues={campaign}
           enableReinitialize={true}
           validationSchema={CampaignSchema}
+          validate={(values) => {
+            const errors = {};
+            if (values.openTicket === "enabled") {
+              if (!selectedUser) {
+                errors.userId = "Required";
+              }
+              if (!selectedQueue) {
+                errors.queueId = "Required";
+              }
+            }
+            return errors;
+          }}
           onSubmit={(values, actions) => {
             setTimeout(() => {
               handleSaveCampaign(values);
@@ -692,7 +709,7 @@ const handleSaveCampaign = async (values) => {
             }, 400);
           }}
         >
-          {({ values, errors, touched, isSubmitting, setFieldValue }) => (
+          {({ values, errors, touched, isSubmitting, setFieldValue, submitCount }) => (
             <Form>
               <DialogContent dividers>
                 <Grid spacing={2} container>
@@ -711,7 +728,7 @@ const handleSaveCampaign = async (values) => {
                     />
                   </Grid>
                   
-                  <Grid xs={12} md={4} item>
+                  {/* <Grid xs={12} md={4} item>
                     <FormControl
                       variant="outlined"
                       margin="dense"
@@ -735,7 +752,7 @@ const handleSaveCampaign = async (values) => {
                         <MenuItem value={true}>Habilitada</MenuItem>
                       </Field>
                     </FormControl>
-                  </Grid>
+                  </Grid> */}
 
                   <Grid xs={12} md={4} item>
                     <Autocomplete
@@ -811,7 +828,7 @@ const handleSaveCampaign = async (values) => {
                       fullWidth
                       className={classes.formControl}
                     >
-                      <InputLabel id="whatsapp-selection-label">
+                      <InputLabel id="whatsapp-selection-label" shrink={whatsappId !== null && whatsappId !== undefined && whatsappId !== ""}>
                         {i18n.t("campaigns.dialog.form.whatsapp")}
                       </InputLabel>
                       <Field
@@ -1195,6 +1212,8 @@ const handleSaveCampaign = async (values) => {
                           {...params}
                           label={i18n.t("transferTicketModal.fieldLabel")}
                           variant="outlined"
+                          error={submitCount > 0 && !selectedUser}
+                          helperText={submitCount > 0 && !selectedUser ? "Selecione um usuário" : ""}
                           InputProps={{
                             ...params.InputProps,
                             endAdornment: (
@@ -1217,15 +1236,15 @@ const handleSaveCampaign = async (values) => {
                       margin="dense"
                       fullWidth
                       className={classes.formControl}
+                      error={submitCount > 0 && !selectedQueue}
                     >
-                      <InputLabel>
+                      <InputLabel shrink={selectedQueue !== "" && selectedQueue !== null && selectedQueue !== undefined}>
                         {i18n.t("transferTicketModal.fieldQueueLabel")}
                       </InputLabel>
                       <Select
                         value={selectedQueue}
                         onChange={(e) => setSelectedQueue(e.target.value)}
-                        label={i18n.t("transferTicketModal.fieldQueuePlaceholder")}
-                        required={!isNil(selectedUser)}
+                        label={i18n.t("transferTicketModal.fieldQueueLabel")}
                         disabled={!campaignEditable || values.openTicket === 'disabled'}
                       >
                         {queues.map((queue) => (
@@ -1234,6 +1253,9 @@ const handleSaveCampaign = async (values) => {
                           </MenuItem>
                         ))}
                       </Select>
+                      {submitCount > 0 && !selectedQueue && (
+                        <FormHelperText error>Fila é obrigatória</FormHelperText>
+                      )}
                     </FormControl>
                   </Grid>
 
@@ -1243,6 +1265,7 @@ const handleSaveCampaign = async (values) => {
                       margin="dense"
                       fullWidth
                       className={classes.formControl}
+                      error={touched.statusTicket && Boolean(errors.statusTicket)}
                     >
                       <InputLabel id="statusTicket-selection-label">
                         {i18n.t("campaigns.dialog.form.statusTicket")}
@@ -1261,6 +1284,9 @@ const handleSaveCampaign = async (values) => {
                         <MenuItem value={"pending"}>{i18n.t("campaigns.dialog.form.pendingTicketStatus")}</MenuItem>
                         <MenuItem value={"open"}>{i18n.t("campaigns.dialog.form.openTicketStatus")}</MenuItem>
                       </Field>
+                      {touched.statusTicket && errors.statusTicket && (
+                        <FormHelperText error>{errors.statusTicket}</FormHelperText>
+                      )}
                     </FormControl>
                   </Grid>
 
@@ -1288,7 +1314,7 @@ const handleSaveCampaign = async (values) => {
                     <Box style={{ paddingTop: 20, border: "none" }}>
                       {messageTab === 0 && (
                         <>
-                          {values.confirmation ? (
+                          {/* {values.confirmation ? (
                             <Grid spacing={2} container>
                               <Grid xs={12} md={8} item>
                                 <>{renderMessageField("message1")}</>
@@ -1299,12 +1325,13 @@ const handleSaveCampaign = async (values) => {
                             </Grid>
                           ) : (
                             <>{renderMessageField("message1")}</>
-                          )}
+                          )} */}
+                          <>{renderMessageField("message1")}</>
                         </>
                       )}
                       {messageTab === 1 && (
                         <>
-                          {values.confirmation ? (
+                          {/* {values.confirmation ? (
                             <Grid spacing={2} container>
                               <Grid xs={12} md={8} item>
                                 <>{renderMessageField("message2")}</>
@@ -1315,12 +1342,13 @@ const handleSaveCampaign = async (values) => {
                             </Grid>
                           ) : (
                             <>{renderMessageField("message2")}</>
-                          )}
+                          )} */}
+                          <>{renderMessageField("message2")}</>
                         </>
                       )}
                       {messageTab === 2 && (
                         <>
-                          {values.confirmation ? (
+                          {/* {values.confirmation ? (
                             <Grid spacing={2} container>
                               <Grid xs={12} md={8} item>
                                 <>{renderMessageField("message3")}</>
@@ -1331,12 +1359,13 @@ const handleSaveCampaign = async (values) => {
                             </Grid>
                           ) : (
                             <>{renderMessageField("message3")}</>
-                          )}
+                          )} */}
+                          <>{renderMessageField("message3")}</>
                         </>
                       )}
                       {messageTab === 3 && (
                         <>
-                          {values.confirmation ? (
+                          {/* {values.confirmation ? (
                             <Grid spacing={2} container>
                               <Grid xs={12} md={8} item>
                                 <>{renderMessageField("message4")}</>
@@ -1347,12 +1376,13 @@ const handleSaveCampaign = async (values) => {
                             </Grid>
                           ) : (
                             <>{renderMessageField("message4")}</>
-                          )}
+                          )} */}
+                          <>{renderMessageField("message4")}</>
                         </>
                       )}
                       {messageTab === 4 && (
                         <>
-                          {values.confirmation ? (
+                          {/* {values.confirmation ? (
                             <Grid spacing={2} container>
                               <Grid xs={12} md={8} item>
                                 <>{renderMessageField("message5")}</>
@@ -1363,7 +1393,8 @@ const handleSaveCampaign = async (values) => {
                             </Grid>
                           ) : (
                             <>{renderMessageField("message5")}</>
-                          )}
+                          )} */}
+                          <>{renderMessageField("message5")}</>
                         </>
                       )}
                     </Box>

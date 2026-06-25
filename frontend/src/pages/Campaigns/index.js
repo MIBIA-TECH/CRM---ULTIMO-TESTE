@@ -136,6 +136,7 @@ const Campaigns = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [recurrenceFilter, setRecurrenceFilter] = useState("");
   const [campaigns, dispatch] = useReducer(reducer, []);
+  const [campaignsCount, setCampaignsCount] = useState(0);
   const { user, socket } = useContext(AuthContext);
 
   const { datetimeToClient } = useDate();
@@ -172,10 +173,14 @@ const Campaigns = () => {
     const companyId = user.companyId;
 
     const onCompanyCampaign = (data) => {
-      if (data.action === "update" || data.action === "create") {
+      if (data.action === "create") {
+        setCampaignsCount((prev) => prev + 1);
+        dispatch({ type: "UPDATE_CAMPAIGNS", payload: data.record });
+      } else if (data.action === "update") {
         dispatch({ type: "UPDATE_CAMPAIGNS", payload: data.record });
       }
       if (data.action === "delete") {
+        setCampaignsCount((prev) => prev - 1);
         dispatch({ type: "DELETE_CAMPAIGN", payload: +data.id });
       }
     }
@@ -197,6 +202,7 @@ const Campaigns = () => {
         },
       });
       dispatch({ type: "LOAD_CAMPAIGNS", payload: data.records });
+      setCampaignsCount(data.count);
       setHasMore(data.hasMore);
       setLoading(false);
     } catch (err) {
@@ -388,8 +394,8 @@ const Campaigns = () => {
           <>
             <MainHeader>
               <Grid style={{ width: "99.6%" }} container>
-                <Grid xs={12} sm={8} item>
-                  <Title>{i18n.t("campaigns.title")}</Title>
+                 <Grid xs={12} sm={8} item>
+                  <Title>{i18n.t("campaigns.title")} ({campaignsCount})</Title>
                 </Grid>
                 <Grid xs={12} sm={4} item>
                   <Grid spacing={2} container>
@@ -493,9 +499,9 @@ const Campaigns = () => {
                     <TableCell align="center" className={classes.tableHeader}>
                       {i18n.t("campaigns.table.completedAt")}
                     </TableCell>
-                    <TableCell align="center" className={classes.tableHeader}>
+                     {/* <TableCell align="center" className={classes.tableHeader}>
                       {i18n.t("campaigns.table.confirmation")}
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell align="center" className={classes.tableHeader}>
                       {i18n.t("campaigns.table.actions")}
                     </TableCell>
@@ -580,9 +586,9 @@ const Campaigns = () => {
                             ? datetimeToClient(campaign.completedAt)
                             : "Não concluída"}
                         </TableCell>
-                        <TableCell align="center">
+                         {/* <TableCell align="center">
                           {campaign.confirmation ? "Habilitada" : "Desabilitada"}
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell align="center">
                           <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
                             {campaign.status === "EM_ANDAMENTO" && (

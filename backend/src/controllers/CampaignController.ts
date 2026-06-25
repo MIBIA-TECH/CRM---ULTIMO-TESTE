@@ -32,6 +32,7 @@ import RecurrenceService from "../services/CampaignService/RecurrenceService";
 import ResendFailedCampaignShippingService from "../services/CampaignService/ResendFailedCampaignShippingService";
 import { campaignQueue } from "../queues";
 import logger from "../utils/logger";
+import { CheckCampaignLimit } from "../helpers/CheckCampaignLimit";
 
 type IndexQuery = {
   searchParam: string;
@@ -278,6 +279,11 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
     await schema.validate(processedData);
 
+    const isLimitReached = await CheckCampaignLimit(companyId, processedData.scheduledAt);
+    if (isLimitReached) {
+      throw new AppError("Já existem 4 campanhas ativas para este dia. O limite é de 4 envios simultâneos.", 400);
+    }
+
     const campaign = await Campaign.create(processedData);
 
     console.log('[Campaign Store] Campanha criada:', campaign.id);
@@ -472,6 +478,11 @@ export const update = async (req: Request, res: Response): Promise<Response> => 
 
     if (!campaign) {
       throw new AppError("ERR_NO_CAMPAIGN_FOUND", 404);
+    }
+
+    const isLimitReached = await CheckCampaignLimit(companyId, processedData.scheduledAt, campaign.id);
+    if (isLimitReached) {
+      throw new AppError("Já existem 4 campanhas ativas para este dia. O limite é de 4 envios simultâneos.", 400);
     }
 
     await campaign.update(processedData);

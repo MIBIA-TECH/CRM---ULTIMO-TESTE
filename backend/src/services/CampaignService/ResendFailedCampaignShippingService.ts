@@ -2,6 +2,7 @@ import { Op } from "sequelize";
 import Campaign from "../../models/Campaign";
 import CampaignShipping from "../../models/CampaignShipping";
 import AppError from "../../errors/AppError";
+import { CheckCampaignLimit } from "../../helpers/CheckCampaignLimit";
 import { campaignQueue } from "../../queues";
 import { getIO } from "../../libs/socket";
 import logger from "../../utils/logger";
@@ -103,6 +104,14 @@ const ResendFailedCampaignShippingService = async ({
   }
 
   if (requeuedCount > 0) {
+    if (campaign.status !== "EM_ANDAMENTO") {
+      const campaignDate = campaign.nextScheduledAt || campaign.scheduledAt;
+      const isLimitReached = await CheckCampaignLimit(campaign.companyId, campaignDate, campaign.id);
+      if (isLimitReached) {
+        throw new AppError("Já existem 4 campanhas ativas para este dia. O limite é de 4 envios simultâneos.", 400);
+      }
+    }
+
     await campaign.update({
       status: "EM_ANDAMENTO",
       completedAt: null

@@ -53,6 +53,7 @@ import { getWbot } from "./libs/wbot";
 import { initializeBirthdayJobs, startBirthdayJob } from "./jobs/BirthdayJob";
 import { getJidOf } from "./services/WbotServices/getJidOf";
 import RecurrenceService from "./services/CampaignService/RecurrenceService";
+import { CheckCampaignLimit } from "./helpers/CheckCampaignLimit";
 import WhatsappLidMap from "./models/WhatsapplidMap";
 import { checkAndDedup } from "./services/WbotServices/verifyContact";
 import QuickMessage from "./models/QuickMessage";
@@ -1196,9 +1197,9 @@ async function handleVerifyCampaigns(job) {
   try {
     await new Promise(r => setTimeout(r, 1500));
 
-    const campaigns: { id: number; scheduledAt: string; nextScheduledAt: string }[] =
+    const campaigns: { id: number; scheduledAt: string; nextScheduledAt: string; companyId: number }[] =
       await sequelize.query(
-        `SELECT id, "scheduledAt", "nextScheduledAt"
+        `SELECT id, "scheduledAt", "nextScheduledAt", "companyId"
          FROM "Campaigns" c
          WHERE (
            (
@@ -1227,6 +1228,16 @@ async function handleVerifyCampaigns(job) {
 
       const promises = campaigns.map(async campaign => {
         try {
+          const campaignDate = campaign.nextScheduledAt || campaign.scheduledAt;
+          const isLimitReached = await CheckCampaignLimit(campaign.companyId, campaignDate, campaign.id);
+          
+          if (isLimitReached) {
+            logger.info(
+              `[handleVerifyCampaigns] Limite de 4 campanhas simultâneas em andamento atingido no dia ${moment(campaignDate).format("YYYY-MM-DD")} para a empresa ${campaign.companyId}. Campanha ${campaign.id} aguardará.`
+            );
+            return null;
+          }
+
           const result = await sequelize.query(
             `UPDATE "Campaigns" SET status = 'EM_ANDAMENTO'
              WHERE id = ${campaign.id} AND status IN ('PROGRAMADA', 'EM_ANDAMENTO')

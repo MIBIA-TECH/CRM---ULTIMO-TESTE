@@ -207,9 +207,31 @@ const useStyles = makeStyles((theme) => ({
 
   containerWithScroll: {
     flex: 1,
-    overflowY: "scroll",
+    overflowY: "auto",
     overflowX: "hidden",
-    ...theme.scrollbarStyles,
+    borderRadius: "8px",
+    border: "2px solid transparent",
+    "&::-webkit-scrollbar": {
+      width: "6px",
+    },
+    "&::-webkit-scrollbar-thumb": {
+      backgroundColor: "rgba(255, 255, 255, 0.2)",
+      borderRadius: "4px",
+      "&:hover": {
+        backgroundColor: "rgba(255, 255, 255, 0.3)",
+      }
+    },
+    "&::-webkit-scrollbar-track": {
+      backgroundColor: "transparent",
+    },
+    scrollbarWidth: "thin",
+    scrollbarColor: "rgba(255, 255, 255, 0.2) transparent",
+  },
+
+  containerWithScrollClosed: {
+    flex: 1,
+    overflowY: "hidden",
+    overflowX: "hidden",
     borderRadius: "8px",
     border: "2px solid transparent",
     "&::-webkit-scrollbar": {
@@ -668,7 +690,7 @@ useEffect(() => {
             <LucideIcon icon={ChevronLeft} size={22} style={{ color: "white" }} />
           </IconButton>
         </div>
-        <List className={classes.containerWithScroll}>
+        <List className={drawerOpen ? classes.containerWithScroll : classes.containerWithScrollClosed}>
           {/* {mainListItems} */}
           <MainListItems collapsed={!drawerOpen} />
         </List>

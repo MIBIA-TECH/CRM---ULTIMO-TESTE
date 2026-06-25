@@ -39,6 +39,8 @@ type IndexQuery = {
   pageNumber: string;
   status?: string;
   isRecurring?: string;
+  startDate?: string;
+  endDate?: string;
 };
 
 // src/controllers/CampaignController.ts - Type StoreData completo
@@ -94,7 +96,7 @@ type ResendFailedBody = {
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { searchParam, pageNumber, status, isRecurring } = req.query as IndexQuery;
+  const { searchParam, pageNumber, status, isRecurring, startDate, endDate } = req.query as IndexQuery;
   const { companyId } = req.user;
 
   const { records, count, hasMore } = await ListService({
@@ -102,7 +104,9 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     pageNumber,
     status,
     isRecurring,
-    companyId
+    companyId,
+    startDate,
+    endDate
   });
 
   return res.json({ records, count, hasMore });

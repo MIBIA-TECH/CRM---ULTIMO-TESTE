@@ -135,6 +135,8 @@ const Campaigns = () => {
   const [searchParam, setSearchParam] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [recurrenceFilter, setRecurrenceFilter] = useState("");
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
   const [campaigns, dispatch] = useReducer(reducer, []);
   const [campaignsCount, setCampaignsCount] = useState(0);
   const { user, socket } = useContext(AuthContext);
@@ -159,7 +161,7 @@ const Campaigns = () => {
   useEffect(() => {
     dispatch({ type: "RESET" });
     setPageNumber(1);
-  }, [searchParam, statusFilter, recurrenceFilter]);
+  }, [searchParam, statusFilter, recurrenceFilter, startDateFilter, endDateFilter]);
 
   useEffect(() => {
     setLoading(true);
@@ -167,7 +169,7 @@ const Campaigns = () => {
       fetchCampaigns();
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [searchParam, pageNumber, statusFilter, recurrenceFilter]);
+  }, [searchParam, pageNumber, statusFilter, recurrenceFilter, startDateFilter, endDateFilter]);
 
   useEffect(() => {
     const companyId = user.companyId;
@@ -198,7 +200,9 @@ const Campaigns = () => {
           searchParam, 
           pageNumber, 
           status: statusFilter,
-          isRecurring: recurrenceFilter 
+          isRecurring: recurrenceFilter,
+          startDate: startDateFilter,
+          endDate: endDateFilter
         },
       });
       dispatch({ type: "LOAD_CAMPAIGNS", payload: data.records });
@@ -433,7 +437,7 @@ const Campaigns = () => {
             {/* Filtros */}
             <Paper className={classes.filterContainer} style={{ padding: 16, marginBottom: 16 }}>
               <Grid spacing={2} container>
-                <Grid xs={12} sm={4} item>
+                <Grid xs={12} sm={3} item>
                   <FormControl fullWidth variant="outlined" size="small">
                     <InputLabel>Filtrar por Status</InputLabel>
                     <Select
@@ -450,7 +454,7 @@ const Campaigns = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid xs={12} sm={4} item>
+                <Grid xs={12} sm={3} item>
                   <FormControl fullWidth variant="outlined" size="small">
                     <InputLabel>Filtrar por Recorrência</InputLabel>
                     <Select
@@ -463,6 +467,34 @@ const Campaigns = () => {
                       <MenuItem value="false">Únicas</MenuItem>
                     </Select>
                   </FormControl>
+                </Grid>
+                <Grid xs={12} sm={3} item>
+                  <TextField
+                    fullWidth
+                    label="Data Agendamento Início"
+                    type="date"
+                    value={startDateFilter}
+                    onChange={(e) => setStartDateFilter(e.target.value)}
+                    variant="outlined"
+                    size="small"
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                  />
+                </Grid>
+                <Grid xs={12} sm={3} item>
+                  <TextField
+                    fullWidth
+                    label="Data Agendamento Fim"
+                    type="date"
+                    value={endDateFilter}
+                    onChange={(e) => setEndDateFilter(e.target.value)}
+                    variant="outlined"
+                    size="small"
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                  />
                 </Grid>
               </Grid>
             </Paper>

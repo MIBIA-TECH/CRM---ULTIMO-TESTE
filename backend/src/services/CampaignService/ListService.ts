@@ -1,4 +1,5 @@
 import { Op, fn, col, where } from "sequelize";
+import { endOfDay, parseISO, startOfDay } from "date-fns";
 import Campaign from "../../models/Campaign";
 import { isEmpty } from "lodash";
 import ContactList from "../../models/ContactList";
@@ -10,6 +11,8 @@ interface Request {
   pageNumber?: string;
   status?: string;
   isRecurring?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 interface Response {
@@ -23,7 +26,9 @@ const ListService = async ({
   pageNumber = "1",
   companyId,
   status,
-  isRecurring
+  isRecurring,
+  startDate,
+  endDate
 }: Request): Promise<Response> => {
   let whereCondition: any = {
     companyId
@@ -55,6 +60,20 @@ const ListService = async ({
     whereCondition = {
       ...whereCondition,
       isRecurring: isRecurring === "true"
+    };
+  }
+
+  if (startDate || endDate) {
+    let dateCondition: any = {};
+    if (startDate) {
+      dateCondition[Op.gte] = startOfDay(parseISO(startDate));
+    }
+    if (endDate) {
+      dateCondition[Op.lte] = endOfDay(parseISO(endDate));
+    }
+    whereCondition = {
+      ...whereCondition,
+      scheduledAt: dateCondition
     };
   }
 

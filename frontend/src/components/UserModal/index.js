@@ -28,9 +28,11 @@ import useWhatsApps from "../../hooks/useWhatsApps";
 
 import { Can } from "../Can";
 import { Avatar, Grid, Input, Paper, Tab, Tabs } from "@material-ui/core";
+import { FileText } from "lucide-react";
 import { getBackendUrl } from "../../config";
 import TabPanel from "../TabPanel";
 import AvatarUploader from "../AvatarUpload";
+import TermsOfUseModal from "../TermsOfUseModal";
 
 const backendUrl = getBackendUrl();
 const path = require("path");
@@ -171,6 +173,7 @@ const UserModal = ({ open, onClose, userId }) => {
   const [profileUrl, setProfileUrl] = useState(null);
   const [tab, setTab] = useState("general");
   const [avatar, setAvatar] = useState(null);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
   const startWorkRef = useRef();
   const endWorkRef = useRef();
 
@@ -222,89 +225,89 @@ const UserModal = ({ open, onClose, userId }) => {
   };
 
   // UserModal/index.js - Função handleSaveUser corrigida
-const handleSaveUser = async (values) => {
-  const uploadAvatar = async (userId) => {
-    if (!avatar || typeof avatar !== 'object') return null;
+  const handleSaveUser = async (values) => {
+    const uploadAvatar = async (userId) => {
+      if (!avatar || typeof avatar !== 'object') return null;
 
-    const formData = new FormData();
-    formData.append("userId", userId);
-    formData.append("typeArch", "user");
-    formData.append("profileImage", avatar);
+      const formData = new FormData();
+      formData.append("userId", userId);
+      formData.append("typeArch", "user");
+      formData.append("profileImage", avatar);
+
+      try {
+        const { data } = await api.post(
+          `/users/${userId}/media-upload`,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+
+        return data.user.profileImage;
+      } catch (error) {
+        console.error("Erro no upload da imagem:", error);
+        throw error;
+      }
+    };
+
+    const userData = {
+      ...values,
+      whatsappId,
+      queueIds: selectedQueueIds,
+      finalizacaoComValorVendaAtiva: values.finalizacaoComValorVendaAtiva === "true",
+      birthDate: parseDateFromInput(values.birthDate),
+      allowSeeMessagesInPendingTickets: values.allowSeeMessagesInPendingTickets === "enabled" ? "enabled" : "disabled"
+    };
 
     try {
-      const { data } = await api.post(
-        `/users/${userId}/media-upload`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+      let responseData;
+
+      if (userId) {
+        // Atualizar usuário existente
+        const { data } = await api.put(`/users/${userId}`, userData);
+        responseData = data;
+
+        // Upload da imagem se houver uma nova
+        if (avatar && typeof avatar === 'object') {
+          const newProfileImage = await uploadAvatar(userId);
+          if (newProfileImage) {
+            responseData.profileImage = newProfileImage;
+
+            // Atualizar localStorage se for o usuário logado
+            if (userId === loggedInUser.id) {
+              localStorage.setItem("profileImage", newProfileImage);
+            }
+          }
         }
-      );
+      } else {
+        // Criar novo usuário
+        const { data } = await api.post("/users", userData);
+        responseData = data.user;
 
-      return data.user.profileImage;
-    } catch (error) {
-      console.error("Erro no upload da imagem:", error);
-      throw error;
-    }
-  };
-
-  const userData = {
-    ...values,
-    whatsappId,
-    queueIds: selectedQueueIds,
-    finalizacaoComValorVendaAtiva: values.finalizacaoComValorVendaAtiva === "true",
-    birthDate: parseDateFromInput(values.birthDate),
-    allowSeeMessagesInPendingTickets: values.allowSeeMessagesInPendingTickets === "enabled" ? "enabled" : "disabled"
-  };
-
-  try {
-    let responseData;
-    
-    if (userId) {
-      // Atualizar usuário existente
-      const { data } = await api.put(`/users/${userId}`, userData);
-      responseData = data;
-      
-      // Upload da imagem se houver uma nova
-      if (avatar && typeof avatar === 'object') {
-        const newProfileImage = await uploadAvatar(userId);
-        if (newProfileImage) {
-          responseData.profileImage = newProfileImage;
-          
-          // Atualizar localStorage se for o usuário logado
-          if (userId === loggedInUser.id) {
-            localStorage.setItem("profileImage", newProfileImage);
+        // Upload da imagem se houver
+        if (avatar && typeof avatar === 'object' && responseData.id) {
+          const newProfileImage = await uploadAvatar(responseData.id);
+          if (newProfileImage) {
+            responseData.profileImage = newProfileImage;
           }
         }
       }
-    } else {
-      // Criar novo usuário
-      const { data } = await api.post("/users", userData);
-      responseData = data.user;
-      
-      // Upload da imagem se houver
-      if (avatar && typeof avatar === 'object' && responseData.id) {
-        const newProfileImage = await uploadAvatar(responseData.id);
-        if (newProfileImage) {
-          responseData.profileImage = newProfileImage;
-        }
-      }
-    }
 
-    handleClose();
-    toast.success(i18n.t("userModal.success"));
-    
-    // Recarregar página se for o usuário logado para atualizar a interface
-    if (userId === loggedInUser.id) {
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      handleClose();
+      toast.success(i18n.t("userModal.success"));
+
+      // Recarregar página se for o usuário logado para atualizar a interface
+      if (userId === loggedInUser.id) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+    } catch (err) {
+      toastError(err);
     }
-  } catch (err) {
-    toastError(err);
-  }
-};
+  };
 
   return (
     <div className={classes.root}>
@@ -665,6 +668,16 @@ const handleSaveUser = async (values) => {
                           </>
                         </FormControl>
                       </Grid>
+                      <Grid item xs={12} sm={12} md={12} style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
+                        <Button
+                          startIcon={<FileText size={18} />}
+                          onClick={() => setTermsModalOpen(true)}
+                          color="primary"
+                          variant="outlined"
+                        >
+                          Visualizar Termos de Uso
+                        </Button>
+                      </Grid>
                     </Grid>
                   </TabPanel>
                   <TabPanel
@@ -858,7 +871,7 @@ const handleSaveUser = async (values) => {
                               >
                                 <>
                                   <InputLabel>
-                                  {i18n.t("userModal.form.allowSeeMessagesInPendingTickets")}
+                                    {i18n.t("userModal.form.allowSeeMessagesInPendingTickets")}
                                   </InputLabel>
 
                                   <Field
@@ -1204,6 +1217,10 @@ const handleSaveUser = async (values) => {
           )}
         </Formik>
       </Dialog>
+      <TermsOfUseModal
+        open={termsModalOpen}
+        onClose={() => setTermsModalOpen(false)}
+      />
     </div>
   );
 };

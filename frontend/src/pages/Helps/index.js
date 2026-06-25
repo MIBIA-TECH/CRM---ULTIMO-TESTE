@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { makeStyles, Paper, Typography, Modal, IconButton } from "@material-ui/core";
+import { FileText } from "lucide-react";
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
 import Title from "../../components/Title";
+import TermsOfUseModal from "../../components/TermsOfUseModal";
 import { i18n } from "../../translate/i18n";
 import useHelps from "../../hooks/useHelps";
 
@@ -70,6 +72,16 @@ const useStyles = makeStyles(theme => ({
     borderRadius: theme.spacing(1),
     overflow: 'hidden',
   },
+  termsThumbnail: {
+    width: '100%',
+    height: 'calc(100% - 56px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.palette.primary.main,
+    color: '#fff',
+    borderRadius: `${theme.spacing(1)}px ${theme.spacing(1)}px 0 0`,
+  },
 }));
 
 const Helps = () => {
@@ -77,6 +89,7 @@ const Helps = () => {
   const [records, setRecords] = useState([]);
   const { list } = useHelps();
   const [selectedVideo, setSelectedVideo] = useState(null);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -95,9 +108,18 @@ const Helps = () => {
     setSelectedVideo(null);
   };
 
+  const openTermsModal = () => {
+    setTermsModalOpen(true);
+  };
+
+  const closeTermsModal = () => {
+    setTermsModalOpen(false);
+  };
+
   const handleModalClose = useCallback((event) => {
     if (event.key === "Escape") {
       closeVideoModal();
+      closeTermsModal();
     }
   }, []);
 
@@ -135,6 +157,20 @@ const Helps = () => {
     return (
       <>
         <div className={`${classes.mainPaper} ${classes.mainPaperContainer}`}>
+          <Paper
+            className={`${classes.helpPaper} ${classes.paperHover}`}
+            onClick={openTermsModal}
+          >
+            <div className={classes.termsThumbnail}>
+              <FileText size={96} />
+            </div>
+            <Typography variant="button" className={classes.videoTitle}>
+              Termos de Uso
+            </Typography>
+            <Typography variant="caption" className={classes.videoDescription}>
+              Clique aqui para visualizar os Termos e Condições de Uso do Mibia CRM.
+            </Typography>
+          </Paper>
           {records.length ? records.map((record, key) => (
             <Paper key={key} className={`${classes.helpPaper} ${classes.paperHover}`} onClick={() => openVideoModal(record.video)}>
               <img
@@ -158,13 +194,14 @@ const Helps = () => {
   return (
     <MainContainer>
       <MainHeader>
-        <Title>{i18n.t("helps.title")} ({records.length})</Title>
+        <Title>{i18n.t("helps.title")} ({records.length + 1})</Title>
         <MainHeaderButtonsWrapper></MainHeaderButtonsWrapper>
       </MainHeader>
       <div className={classes.mainPaper}>
         {renderHelps()}
       </div>
       {renderVideoModal()}
+      <TermsOfUseModal open={termsModalOpen} onClose={closeTermsModal} />
     </MainContainer>
   );
 };

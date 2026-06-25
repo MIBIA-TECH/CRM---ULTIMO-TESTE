@@ -165,26 +165,32 @@ async function triggerBotOnRedirect(
   }
 }
 
-export const userMonitor = new BullQueue("UserMonitor", connection);
-export const scheduleMonitor = new BullQueue("ScheduleMonitor", connection);
-export const sendScheduledMessages = new BullQueue(
-  "SendSacheduledMessages",
-  connection
-);
+// Opções padrão para todas as filas: limpa jobs automaticamente após conclusão/falha
+// Mantém os últimos 200 completed e 50 failed para diagnóstico, evitando acúmulo no Redis
+const defaultJobOptions: BullQueue.JobOptions = {
+  removeOnComplete: { count: 200 },
+  removeOnFail: { count: 50 }
+};
+
+export const userMonitor = new BullQueue("UserMonitor", connection, { defaultJobOptions });
+export const scheduleMonitor = new BullQueue("ScheduleMonitor", connection, { defaultJobOptions });
+export const sendScheduledMessages = new BullQueue("SendSacheduledMessages", connection, { defaultJobOptions });
 export const campaignQueue = new BullQueue("CampaignQueue", connection, {
   limiter: {
     max: 5,
     duration: 1000
-  }
+  },
+  defaultJobOptions
 });
-export const queueMonitor = new BullQueue("QueueMonitor", connection);
-export const lidRetryQueue = new BullQueue("LidRetryQueue", connection);
+export const queueMonitor = new BullQueue("QueueMonitor", connection, { defaultJobOptions });
+export const lidRetryQueue = new BullQueue("LidRetryQueue", connection, { defaultJobOptions });
 
 export const messageQueue = new BullQueue("MessageQueue", connection, {
   limiter: {
     max: limiterMax as number,
     duration: limiterDuration as number
-  }
+  },
+  defaultJobOptions
 });
 
 // ✅ CORREÇÃO (Issue #12): Helper de dia útil movido para nível de módulo
@@ -1303,29 +1309,29 @@ async function getCampaign(id, options: GetCampaignOptions = {}) {
     include: [
       ...(includeContacts
         ? [
-            {
-              model: ContactList,
-              as: "contactList",
-              attributes: ["id", "name"],
-              required: false, // LEFT JOIN para campanhas que podem usar tags
-              include: [
-                {
-                  model: ContactListItem,
-                  as: "contacts",
-                  attributes: [
-                    "id",
-                    "name",
-                    "number",
-                    "email",
-                    "isWhatsappValid",
-                    "isGroup"
-                  ],
-                  where: { isWhatsappValid: true },
-                  required: false
-                }
-              ]
-            }
-          ]
+          {
+            model: ContactList,
+            as: "contactList",
+            attributes: ["id", "name"],
+            required: false, // LEFT JOIN para campanhas que podem usar tags
+            include: [
+              {
+                model: ContactListItem,
+                as: "contacts",
+                attributes: [
+                  "id",
+                  "name",
+                  "number",
+                  "email",
+                  "isWhatsappValid",
+                  "isGroup"
+                ],
+                where: { isWhatsappValid: true },
+                required: false
+              }
+            ]
+          }
+        ]
         : []),
       {
         model: Whatsapp,

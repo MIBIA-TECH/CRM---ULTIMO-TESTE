@@ -5,6 +5,7 @@ import Ticket from "../../models/Ticket";
 import Contact from "../../models/Contact";
 import { isNil } from "lodash";
 import { sendMessageWhatsAppOficial } from "../../libs/whatsAppOficial/whatsAppOficial.service";
+import { CircuitOpenError } from "../../libs/whatsAppOficial/circuitBreaker";
 import { IMetaMessageTemplate, IMetaMessageinteractive, IReturnMessageMeta, ISendMessageOficial } from "../../libs/whatsAppOficial/IWhatsAppOficial.interfaces";
 import CreateMessageService from "../MessageServices/CreateMessageService";
 import SafeCreateMessage from "../../helpers/SafeCreateMessage";
@@ -302,6 +303,16 @@ const SendWhatsAppOficialMessage = async ({
     return sendMessage;
 
   } catch (err) {
+    // Circuit Breaker aberto — falha imediata, sem tentar salvar mensagem
+    if (err instanceof CircuitOpenError) {
+      logger.warn(
+        `[WHATSAPP OFICIAL - CIRCUIT OPEN] Envio bloqueado pelo Circuit Breaker ` +
+        `(Ticket: ${ticket.id}, Recuperação em ${Math.ceil(err.recoveryIn / 1000)}s). ` +
+        `A API Oficial do WhatsApp pode estar instável.`
+      );
+      throw new AppError("ERR_WHATSAPP_OFICIAL_UNAVAILABLE");
+    }
+
     logger.error(`[WHATSAPP OFICIAL - ERROR] Erro ao enviar mensagem - Company: ${ticket.companyId}, Ticket: ${ticket.id}`, err);
 
     // ✅ Se mensagem foi enviada mas erro aconteceu depois, tentar salvar

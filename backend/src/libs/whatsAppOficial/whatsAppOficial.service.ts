@@ -1,84 +1,175 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { ICreateConnectionWhatsAppOficial, ICreateConnectionWhatsAppOficialWhatsApp, IDataCreateUserApiOficial, IPayloadAPIWhatsAppOficial, IResultTemplates, IReturnConnectionCreateAPIWhatsAppOficial, IReturnCreateCompanyAPIWhatsAppOficial, IReturnMessageMeta, ISendMessageOficial, IUpdateonnectionWhatsAppOficialWhatsApp, IUserApiOficial } from "./IWhatsAppOficial.interfaces";
 import fs from 'fs';
 import mime from "mime-types";
 import FormData from "form-data";
 import campaignLogger from "../../utils/campaignLogger";
 import logger from "../../utils/logger";
+import {
+  withCircuitBreaker,
+  isTransientError,
+  CircuitOpenError,
+  getCircuitStatus
+} from "./circuitBreaker";
 
 const useOficial = process.env.USE_WHATSAPP_OFICIAL;
 const urlApi = process.env.URL_API_OFICIAL;
 const token = process.env.TOKEN_API_OFICIAL;
-export const sendMessageWhatsAppOficial = async (
-    filePath: string,
-    token: string,
-    data: ISendMessageOficial
-): Promise<IReturnMessageMeta> => {
 
-    try {
-        // ✅ REMOVIDO: checkAPIOficial() fazia um GET health-check em CADA mensagem
-        // Desnecessário — se api_oficial estiver offline, o POST abaixo falhará com erro claro
-        const formData = new FormData();
+/** Timeout por requisição — 15s para dar margem a uploads de mídia */
+const REQUEST_TIMEOUT_MS = 15_000;
 
-        if (filePath) {
-            const file = fs.readFileSync(filePath);
-            const mimeType = mime.lookup(filePath);
-            formData.append('file', file, {
-                filename: filePath.split('/').pop(),
-                contentType: mimeType
-            });
-        }
+/** Configuração de retry: tentativas após a 1ª falha */
+const RETRY_CONFIG = {
+  maxRetries: 2,
+  delaysMs: [1_000, 3_000], // Esperas entre tentativas
+};
 
-        formData.append('data', JSON.stringify(data));
+/**
+ * Chave de circuit breaker derivada do token.
+ * Usa os primeiros 15 caracteres para identificar a conexão sem expor o token completo.
+ */
+function getCircuitKey(token: string): string {
+  return `whatsapp-oficial:${token.substring(0, 15)}`;
+}
 
-        // Log da requisição
-        console.log('📋 [WHATSAPP-OFICIAL] Enviando mensagem:', JSON.stringify(data, null, 2));
-        campaignLogger.apiRequest('POST', `/v1/send-message-whatsapp/${token.substring(0, 10)}...`, {
-            to: data.to,
-            type: data.type,
-            hasFile: !!filePath
-        });
+/**
+ * Realiza a chamada HTTP de envio de mensagem para a API Oficial.
+ * Função interna — sem retry ou circuit breaker (gerenciados pelo caller).
+ */
+async function doSendRequest(
+  filePath: string,
+  token: string,
+  data: ISendMessageOficial
+): Promise<IReturnMessageMeta> {
+  const formData = new FormData();
 
-        const res = await axios.post(`${urlApi}/v1/send-message-whatsapp/${token}`, formData, {
-            headers: {
-                ...formData.getHeaders(),
-            },
-            timeout: 10000, // 10s — evita bloqueio indefinido se api_oficial travar
-        });
+  if (filePath) {
+    const file = fs.readFileSync(filePath);
+    const mimeType = mime.lookup(filePath);
+    formData.append("file", file, {
+      filename: filePath.split("/").pop(),
+      contentType: mimeType || "application/octet-stream",
+    });
+  }
 
-        // Log da resposta
-        campaignLogger.apiResponse('POST', `/v1/send-message-whatsapp/${token.substring(0, 10)}...`, res.status, {
-            messageId: res.data?.id,
-            status: res.data?.status
-        });
+  formData.append("data", JSON.stringify(data));
 
-        if (res.status == 200 || res.status == 201) return res.data as IReturnMessageMeta;
-
-        throw new Error('Falha em enviar a mensagem para a API da Meta');
-
-    } catch (error) {
-        // Log do erro
-        campaignLogger.error('Erro ao enviar mensagem via API Oficial', error, {
-            to: data.to,
-            type: data.type,
-            apiUrl: urlApi,
-            response: error.response?.data
-        });
-
-        // ✅ CORREÇÃO: Preservar erro original da API Meta para diagnóstico
-        const metaErrorDetail = error.response?.data?.error?.message
-            || error.response?.data?.message
-            || error.response?.data?.detail
-            || null;
-
-        const originalMessage = metaErrorDetail
-            ? `Meta API: ${metaErrorDetail}`
-            : `Mensagem não enviada para a meta: ${error.message}`;
-
-        logger.error(`[WHATSAPP-OFICIAL] ${originalMessage}`);
-        throw new Error(originalMessage);
+  const res = await axios.post(
+    `${urlApi}/v1/send-message-whatsapp/${token}`,
+    formData,
+    {
+      headers: { ...formData.getHeaders() },
+      timeout: REQUEST_TIMEOUT_MS,
     }
+  );
 
+  if (res.status === 200 || res.status === 201) {
+    return res.data as IReturnMessageMeta;
+  }
+
+  throw new Error("Falha em enviar a mensagem para a API da Meta");
+}
+
+/**
+ * Envia mensagem via API Oficial do WhatsApp com:
+ * - Circuit Breaker por conexão (token)
+ * - Retry com backoff exponencial para erros transitórios
+ * - Timeout configurável por requisição
+ */
+export const sendMessageWhatsAppOficial = async (
+  filePath: string,
+  token: string,
+  data: ISendMessageOficial
+): Promise<IReturnMessageMeta> => {
+  const circuitKey = getCircuitKey(token);
+
+  campaignLogger.apiRequest(
+    "POST",
+    `/v1/send-message-whatsapp/${token.substring(0, 10)}...`,
+    { to: data.to, type: data.type, hasFile: !!filePath }
+  );
+
+  console.log("📋 [WHATSAPP-OFICIAL] Enviando mensagem:", JSON.stringify(data, null, 2));
+
+  // Executa com Circuit Breaker (lança CircuitOpenError se estiver OPEN)
+  return withCircuitBreaker(
+    circuitKey,
+    async () => {
+      let lastError: Error | null = null;
+
+      // Loop de retry (tentativa 0 = primeira chamada, tentativas 1..N = retries)
+      for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+        try {
+          if (attempt > 0) {
+            const delay = RETRY_CONFIG.delaysMs[attempt - 1] ?? 3_000;
+            logger.info(
+              `[WHATSAPP-OFICIAL] Retry ${attempt}/${RETRY_CONFIG.maxRetries} ` +
+              `para ${data.to} em ${delay}ms...`
+            );
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+
+          const result = await doSendRequest(filePath, token, data);
+
+          campaignLogger.apiResponse(
+            "POST",
+            `/v1/send-message-whatsapp/${token.substring(0, 10)}...`,
+            200,
+            { status: "ok" }
+          );
+
+          return result;
+        } catch (err) {
+          const error = err as Error;
+          lastError = error;
+          const transient = isTransientError(err);
+
+          // Erro de negócio (4xx) → não retenta, falha imediata
+          if (!transient) {
+            const metaDetail =
+              (err as AxiosError<any>)?.response?.data?.error?.message ||
+              (err as AxiosError<any>)?.response?.data?.message ||
+              (err as AxiosError<any>)?.response?.data?.detail ||
+              null;
+
+            const msg = metaDetail
+              ? `Meta API: ${metaDetail}`
+              : `Mensagem não enviada para a meta: ${error.message}`;
+
+            logger.error(`[WHATSAPP-OFICIAL] Erro de negócio (sem retry): ${msg}`);
+            campaignLogger.error("Erro de negócio ao enviar mensagem (sem retry)", err, {
+              to: data.to,
+              type: data.type,
+              response: (err as AxiosError<any>)?.response?.data,
+            });
+
+            throw new Error(msg);
+          }
+
+          // Erro transitório — loga e tenta novamente (se houver tentativas restantes)
+          logger.warn(
+            `[WHATSAPP-OFICIAL] Erro transitório na tentativa ${attempt + 1}` +
+            `/${RETRY_CONFIG.maxRetries + 1}: ${error.message}`
+          );
+        }
+      }
+
+      // Todas as tentativas esgotadas
+      campaignLogger.error("Timeout/rede após todas as tentativas", lastError, {
+        to: data.to,
+        type: data.type,
+        apiUrl: urlApi,
+      });
+
+      logger.error(
+        `[WHATSAPP-OFICIAL] Todas as ${RETRY_CONFIG.maxRetries + 1} tentativas falharam ` +
+        `para ${data.to}. Último erro: ${lastError?.message}`
+      );
+
+      throw lastError ?? new Error("Falha ao enviar mensagem via API Oficial");
+    }
+  );
 }
 
 export const CreateCompanyConnectionOficial = async (data: ICreateConnectionWhatsAppOficial) => {

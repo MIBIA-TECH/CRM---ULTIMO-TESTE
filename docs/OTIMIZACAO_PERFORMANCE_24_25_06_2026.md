@@ -1,6 +1,6 @@
 # 🔧 Otimização de Performance — CRM Multicanal
 
-**Data:** 24–25/06/2026  
+**Data:** 24–26/06/2026  
 **Ambiente:** Produção  
 **Reportado por:** Clientes (lentidão intermitente ao usar o sistema)  
 **Executado por:** Natanael — Mibia Digital
@@ -14,7 +14,8 @@
 3. [Correção 1 — Circuit Breaker na API Oficial do WhatsApp](#3-correção-1--circuit-breaker-na-api-oficial-do-whatsapp)
 4. [Correção 2 — Limpeza e manutenção do Redis Bull](#4-correção-2--limpeza-e-manutenção-do-redis-bull)
 5. [Correção 3 — Otimização do PostgreSQL](#5-correção-3--otimização-do-postgresql)
-6. [Situação atual e pendências](#6-situação-atual-e-pendências)
+6. [Correção 4 — Campanhas travadas em EM_ANDAMENTO (26/06)](#6-correção-4--campanhas-travadas-em-em_andamento-2606)
+7. [Situação atual e pendências](#7-situação-atual-e-pendências)
 
 ---
 
@@ -205,7 +206,106 @@ systemctl restart postgresql
 
 ---
 
-## 6. Situação atual e pendências
+## 6. Correção 4 — Campanhas travadas em EM_ANDAMENTO
+
+**Data:** 26/06/2026
+
+### O problema
+
+Em 26/06 às 11:54 (horário de Brasília), clientes reportaram lentidão severa. O diagnóstico revelou:
+
+- **75 campanhas com status `EM_ANDAMENTO`** no banco, sendo a mais antiga de **02/02/2026** (mais de 4 meses travada)
+- O cron `VerifyCampaignsDaatabase` rodava **a cada 20 segundos** e processava todas as 75 campanhas em cada ciclo
+- Cada ciclo gerava dezenas de queries pesadas no banco simultaneamente
+- O backend estava com **1,1 GB de memória** (normal: ~300 MB) e **21 restarts**
+
+```
+A cada 20 segundos:
+  → Busca 75 campanhas EM_ANDAMENTO
+  → Para cada uma: faz queries no banco, verifica limites, tenta processar
+  → 75 x queries pesadas = banco sobrecarregado
+  → Backend acumula memória → crash → restart → sistema lento
+```
+
+### Causa raiz
+
+O código de finalização de campanhas (`verifyAndFinalizeCampaign`) dependia de ser chamado corretamente após o envio. Em casos de crash, timeout ou race condition, a campanha ficava em `EM_ANDAMENTO` para sempre — sem nenhum mecanismo automático de limpeza.
+
+### Solução aplicada (2 partes)
+
+#### Parte 1 — Limpeza manual imediata
+
+```sql
+-- Finalizou 59 campanhas travadas há mais de 24h
+UPDATE "Campaigns"
+SET status = 'CANCELADA'
+WHERE status = 'EM_ANDAMENTO'
+  AND "scheduledAt" < NOW() - INTERVAL '24 hours';
+-- UPDATE 59
+
+-- Finalizou as 3 de ontem que restaram
+UPDATE "Campaigns"
+SET status = 'FINALIZADA', "completedAt" = NOW()
+WHERE status = 'EM_ANDAMENTO'
+  AND "scheduledAt" < CURRENT_DATE;
+-- UPDATE 3
+```
+
+**Resultado:** 75 campanhas → 9 (só as legítimas do dia)
+
+#### Parte 2 — Auto-finalização no código (permanente)
+
+**Arquivo modificado:** `backend/src/queues.ts` — função `handleVerifyCampaigns`
+
+Adicionado bloco de verificação que roda **a cada 5 minutos** dentro do cron existente, detectando e finalizando campanhas travadas em 2 casos:
+
+**CASO 1 — Campanha nunca processou nada:**
+```sql
+SELECT c.id FROM "Campaigns" c
+WHERE c.status = 'EM_ANDAMENTO'
+  AND c."updatedAt" < NOW() - INTERVAL '6 hours'
+  AND NOT EXISTS (SELECT 1 FROM "CampaignShipping" cs WHERE cs."campaignId" = c.id)
+  AND (c."isRecurring" = false OR c."isRecurring" IS NULL)
+-- Se encontrar: marca como FINALIZADA
+```
+
+**CASO 2 — Campanha processou mas não fechou:**
+```sql
+SELECT c.id FROM "Campaigns" c
+WHERE c.status = 'EM_ANDAMENTO'
+  AND c."updatedAt" < NOW() - INTERVAL '2 hours'
+  AND (c."isRecurring" = false OR c."isRecurring" IS NULL)
+  AND EXISTS (SELECT 1 FROM "CampaignShipping" cs WHERE cs."campaignId" = c.id)
+  AND NOT EXISTS (
+    SELECT 1 FROM "CampaignShipping" cs
+    WHERE cs."campaignId" = c.id
+      AND cs."deliveredAt" IS NULL AND cs."failedAt" IS NULL
+  )
+-- Se encontrar: marca como FINALIZADA
+```
+
+**Variável de controle de throttle** adicionada no módulo:
+```typescript
+let lastStaleCheckAt = 0; // controla que só roda a cada 5 minutos
+```
+
+**Log esperado quando atuar:**
+```
+[CAMPAIGN-VERIFY] ✅ 2 campanha(s) travada(s) finalizadas automaticamente. IDs: 1012, 1013
+```
+
+### Resultado
+
+| Métrica | Antes | Depois |
+|---|---|---|
+| Campanhas `EM_ANDAMENTO` | **75** | **6** (só as ativas do dia) |
+| Memória do backend | **1,1 GB** 🔴 | **300–600 MB** 🟢 |
+| Carga no banco | Múltiplas queries pesadas a cada 20s | Apenas campanhas reais |
+| Intervenção manual futura | Necessária | Desnecessária (auto-fix) |
+
+---
+
+## 7. Situação atual e pendências
 
 ### ✅ Corrigido
 
@@ -216,6 +316,8 @@ systemctl restart postgresql
 | Redis Bull — limpeza automática futura | ✅ Em produção desde 25/06/2026 |
 | PostgreSQL — otimização de memória | ✅ Feito em 25/06/2026 |
 | Backend restarts por timeouts | ✅ Resolvido como consequência do Circuit Breaker |
+| 75 campanhas travadas sobrecarregando o banco | ✅ Resolvido em 26/06/2026 |
+| Auto-finalização de campanhas travadas | ✅ Em produção desde 26/06/2026 |
 
 ### 📅 Pendente (próximas sprints)
 
@@ -227,17 +329,18 @@ systemctl restart postgresql
 
 ---
 
-## Status do servidor pós-otimização
+## Status do servidor pós-otimização (26/06/2026)
 
 ```bash
 pm2 list
-# backend     → online ✅
+# backend     → online ✅ (~300-600 MB)
 # frontend    → online ✅
 # api-oficial → online ✅
 
 systemctl is-active postgresql
 # active ✅
 
-redis-cli ZCARD "bull:CampaignQueue:completed"
-# ~21 (antes: 72.457) ✅
+# Campanhas EM_ANDAMENTO (só as legítimas do dia)
+SELECT COUNT(*) FROM "Campaigns" WHERE status = 'EM_ANDAMENTO';
+# 6 (antes do fix: 75)
 ```

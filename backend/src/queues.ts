@@ -1231,7 +1231,7 @@ async function handleVerifyCampaigns(job) {
         try {
           const campaignDate = campaign.nextScheduledAt || campaign.scheduledAt;
           const isLimitReached = await CheckCampaignLimit(campaign.companyId, campaignDate, campaign.id);
-          
+
           if (isLimitReached) {
             logger.info(
               `[handleVerifyCampaigns] Limite de 4 campanhas simultâneas em andamento atingido no dia ${moment(campaignDate).format("YYYY-MM-DD")} para a empresa ${campaign.companyId}. Campanha ${campaign.id} aguardará.`
@@ -1305,7 +1305,7 @@ async function handleVerifyCampaigns(job) {
         lastCampaignVerifyDiagnosticAt = now;
       }
     }
-    // ✅ CORREÇÃO: Finalizar automaticamente campanhas EM_ANDAMENTO travadas
+    // CORREÇÃO: Finalizar automaticamente campanhas EM_ANDAMENTO travadas
     // Roda a cada ciclo mas com throttle de 5 minutos para não sobrecarregar
     const staleCheckNow = Date.now();
     const STALE_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutos

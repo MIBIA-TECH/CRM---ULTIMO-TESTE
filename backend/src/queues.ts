@@ -202,6 +202,7 @@ function isDiaUtil(date: any): boolean {
 
 let isProcessing = false;
 let lastCampaignVerifyDiagnosticAt = 0;
+let lastStaleCheckAt = 0; // controla throttle da verificação de campanhas travadas
 const campaignFinalizeTimers = new Map<number, NodeJS.Timeout>();
 
 export function scheduleCampaignFinalizeCheck(campaignId: number) {
@@ -1304,6 +1305,59 @@ async function handleVerifyCampaigns(job) {
         lastCampaignVerifyDiagnosticAt = now;
       }
     }
+    // ✅ CORREÇÃO: Finalizar automaticamente campanhas EM_ANDAMENTO travadas
+    // Roda a cada ciclo mas com throttle de 5 minutos para não sobrecarregar
+    const staleCheckNow = Date.now();
+    const STALE_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutos
+    if (staleCheckNow - lastStaleCheckAt > STALE_CHECK_INTERVAL) {
+      lastStaleCheckAt = staleCheckNow;
+      try {
+        // Caso 1: EM_ANDAMENTO há mais de 6h sem nenhum CampaignShipping criado → nunca processou, finalizar
+        const staleCampaignsNoShipping: { id: number }[] = await sequelize.query(
+          `SELECT c.id FROM "Campaigns" c
+           WHERE c.status = 'EM_ANDAMENTO'
+             AND c."updatedAt" < NOW() - INTERVAL '6 hours'
+             AND NOT EXISTS (SELECT 1 FROM "CampaignShipping" cs WHERE cs."campaignId" = c.id)
+             AND (c."isRecurring" = false OR c."isRecurring" IS NULL)`,
+          { type: QueryTypes.SELECT }
+        );
+
+        // Caso 2: EM_ANDAMENTO há mais de 2h e todos os shippings já foram processados (entregues ou falhados)
+        const staleCampaignsAllDone: { id: number }[] = await sequelize.query(
+          `SELECT c.id FROM "Campaigns" c
+           WHERE c.status = 'EM_ANDAMENTO'
+             AND c."updatedAt" < NOW() - INTERVAL '2 hours'
+             AND (c."isRecurring" = false OR c."isRecurring" IS NULL)
+             AND EXISTS (SELECT 1 FROM "CampaignShipping" cs WHERE cs."campaignId" = c.id)
+             AND NOT EXISTS (
+               SELECT 1 FROM "CampaignShipping" cs
+               WHERE cs."campaignId" = c.id
+                 AND cs."deliveredAt" IS NULL
+                 AND cs."failedAt" IS NULL
+             )`,
+          { type: QueryTypes.SELECT }
+        );
+
+        const staleIds = [
+          ...staleCampaignsNoShipping.map(c => c.id),
+          ...staleCampaignsAllDone.map(c => c.id)
+        ];
+
+        if (staleIds.length > 0) {
+          await sequelize.query(
+            `UPDATE "Campaigns" SET status = 'FINALIZADA', "completedAt" = NOW()
+             WHERE id IN (${staleIds.join(",")}) AND status = 'EM_ANDAMENTO'`,
+            { type: QueryTypes.UPDATE }
+          );
+          logger.info(
+            `[CAMPAIGN-VERIFY] ✅ ${staleIds.length} campanha(s) travada(s) finalizadas automaticamente. IDs: ${staleIds.join(", ")}`
+          );
+        }
+      } catch (staleErr) {
+        logger.error(`[CAMPAIGN-VERIFY] Erro ao verificar campanhas travadas: ${staleErr.message}`);
+      }
+    }
+
   } catch (err) {
     Sentry.captureException(err);
     logger.error(`Error processing campaigns: ${err.message}`);

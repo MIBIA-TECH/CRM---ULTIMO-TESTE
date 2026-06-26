@@ -54,13 +54,31 @@ const ListMessagesService = async ({
 
   const isAllHistoricEnabled = await isQueueIdHistoryBlocked({ userRequest: user.id });
 
+  // Buscar todos os contatos com número correspondente (conciliação 9º dígito BR)
+  const currentContact = await Contact.findByPk(ticket.contactId);
+  const numbersToSearch = [currentContact.number];
+
+  if (!ticket.isGroup && currentContact.number.startsWith("55")) {
+    if (currentContact.number.length === 13 && currentContact.number[4] === "9") {
+      numbersToSearch.push(currentContact.number.slice(0, 4) + currentContact.number.slice(5));
+    } else if (currentContact.number.length === 12) {
+      numbersToSearch.push(currentContact.number.slice(0, 4) + "9" + currentContact.number.slice(4));
+    }
+  }
+
+  const contacts = await Contact.findAll({
+    where: { number: { [Op.in]: numbersToSearch }, companyId: ticket.companyId },
+    attributes: ["id"]
+  });
+  const contactIds = contacts.map(c => c.id);
+
   let ticketIds = [];
   if (!isAllHistoricEnabled) {
     ticketIds = await Ticket.findAll({
       where:
       {
         companyId: ticket.companyId,
-        contactId: ticket.contactId,
+        contactId: { [Op.in]: contactIds },
         whatsappId: ticket.whatsappId,
         isGroup: ticket.isGroup,
         queueId: user.profile === "admin" || user.allTicket === "enable" || (ticket.isGroup && user.allowGroup) ?
@@ -76,7 +94,7 @@ const ListMessagesService = async ({
       where:
       {
         companyId: ticket.companyId,
-        contactId: ticket.contactId,
+        contactId: { [Op.in]: contactIds },
         whatsappId: ticket.whatsappId,
         isGroup: ticket.isGroup
       },

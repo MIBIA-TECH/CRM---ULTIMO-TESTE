@@ -1,5 +1,6 @@
 import { getIO } from "../../libs/socket";
 import Contact from "../../models/Contact";
+import { Op } from "sequelize";
 
 interface ExtraInfo {
   name: string;
@@ -40,8 +41,25 @@ const CreateOrUpdateContactServiceForImport = async ({
   let contact: Contact | null;
 
   try {
-    // Buscar contato existente
-    contact = await Contact.findOne({ where: { number, companyId } });
+    // Buscar contato existente com conciliação do 9º dígito (Brasil)
+    const numbersToSearch = [number];
+
+    if (!isGroup && number.startsWith("55")) {
+      if (number.length === 13 && number[4] === "9") {
+        const numberWithoutNine = number.slice(0, 4) + number.slice(5);
+        numbersToSearch.push(numberWithoutNine);
+      } else if (number.length === 12) {
+        const numberWithNine = number.slice(0, 4) + "9" + number.slice(4);
+        numbersToSearch.push(numberWithNine);
+      }
+    }
+
+    contact = await Contact.findOne({
+      where: {
+        number: { [Op.in]: numbersToSearch },
+        companyId
+      }
+    });
 
     if (contact) {
       // Atualizar contato existente

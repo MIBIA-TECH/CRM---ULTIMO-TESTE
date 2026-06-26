@@ -25,10 +25,31 @@ const SearchContactMessagesService = async ({
   const limit = 20;
   const offset = limit * (+pageNumber - 1);
 
-  // Buscar todos os tickets do contato
+  // Buscar todos os contatos com número correspondente (conciliação 9º dígito BR)
+  const currentContact = await Contact.findByPk(contactId);
+  if (!currentContact) {
+    return { messages: [], count: 0, hasMore: false };
+  }
+
+  const numbersToSearch = [currentContact.number];
+  if (!currentContact.isGroup && currentContact.number.startsWith("55")) {
+    if (currentContact.number.length === 13 && currentContact.number[4] === "9") {
+      numbersToSearch.push(currentContact.number.slice(0, 4) + currentContact.number.slice(5));
+    } else if (currentContact.number.length === 12) {
+      numbersToSearch.push(currentContact.number.slice(0, 4) + "9" + currentContact.number.slice(4));
+    }
+  }
+
+  const contacts = await Contact.findAll({
+    where: { number: { [Op.in]: numbersToSearch }, companyId },
+    attributes: ["id"]
+  });
+  const contactIds = contacts.map(c => c.id);
+
+  // Buscar todos os tickets desses contatos
   const tickets = await Ticket.findAll({
     where: {
-      contactId,
+      contactId: { [Op.in]: contactIds },
       companyId
     },
     attributes: ["id"]

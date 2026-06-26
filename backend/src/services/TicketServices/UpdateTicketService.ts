@@ -124,6 +124,12 @@ const UpdateTicketService = async ({
 
     let ticket = await ShowTicketService(ticketId, companyId);
 
+    // Se o status final do ticket for "open" (ou continuar "open"), mas não houver atendente atribuído, força o status para "pending"
+    const targetStatus = status || ticket.status;
+    if (targetStatus === "open" && !userId) {
+      status = "pending";
+    }
+
     if (isBot === null) {
       isBot = ticket.isBot;
     }

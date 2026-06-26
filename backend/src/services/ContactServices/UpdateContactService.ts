@@ -1,4 +1,5 @@
 // src/services/ContactServices/UpdateContactService.ts - CORRIGIDO
+import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
 import Contact from "../../models/Contact";
 import ContactCustomField from "../../models/ContactCustomField";
@@ -94,6 +95,31 @@ const UpdateContactService = async ({
 
   if (contact.companyId !== companyId) {
     throw new AppError("N o  poss vel alterar registros de outra empresa");
+  }
+
+  if (number && number !== contact.number) {
+    const numbersToSearch = [number];
+    if (number.startsWith("55")) {
+      if (number.length === 13 && number[4] === "9") {
+        const numberWithoutNine = number.slice(0, 4) + number.slice(5);
+        numbersToSearch.push(numberWithoutNine);
+      } else if (number.length === 12) {
+        const numberWithNine = number.slice(0, 4) + "9" + number.slice(4);
+        numbersToSearch.push(numberWithNine);
+      }
+    }
+
+    const numberExists = await Contact.findOne({
+      where: {
+        number: { [Op.in]: numbersToSearch },
+        companyId,
+        id: { [Op.ne]: contact.id }
+      }
+    });
+
+    if (numberExists) {
+      throw new AppError("ERR_DUPLICATED_CONTACT");
+    }
   }
 
   if (extraInfo) {

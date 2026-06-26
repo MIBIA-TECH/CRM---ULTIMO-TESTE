@@ -1,4 +1,5 @@
 // src/services/ContactServices/CreateContactService.ts - CORRIGIDO
+import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
 import CompaniesSettings from "../../models/CompaniesSettings";
 import Contact from "../../models/Contact";
@@ -51,8 +52,23 @@ const CreateContactService = async ({
   console.log('remoteJid', remoteJid)
 
 
+  // Conciliação de 9º dígito (Brasil)
+  const numbersToSearch = [number];
+  if (number.startsWith("55")) {
+    if (number.length === 13 && number[4] === "9") {
+      const numberWithoutNine = number.slice(0, 4) + number.slice(5);
+      numbersToSearch.push(numberWithoutNine);
+    } else if (number.length === 12) {
+      const numberWithNine = number.slice(0, 4) + "9" + number.slice(4);
+      numbersToSearch.push(numberWithNine);
+    }
+  }
+
   const numberExists = await Contact.findOne({
-    where: { number, companyId }
+    where: {
+      number: { [Op.in]: numbersToSearch },
+      companyId
+    }
   });
   
   if (numberExists) {

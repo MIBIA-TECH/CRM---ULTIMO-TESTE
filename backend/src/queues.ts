@@ -43,6 +43,7 @@ import FindOrCreateTicketService from "./services/TicketServices/FindOrCreateTic
 import CreateLogTicketService from "./services/TicketServices/CreateLogTicketService";
 import FindOrCreateATicketTrakingService from "./services/TicketServices/FindOrCreateATicketTrakingService";
 import formatBody from "./helpers/Mustache";
+import { buildTemplateBody } from "./helpers/BuildTemplateBody";
 import TicketTag from "./models/TicketTag";
 import Tag from "./models/Tag";
 import ContactTag from "./models/ContactTag";
@@ -605,8 +606,15 @@ async function handleSendScheduledMessage(job) {
 
         const officialMessageId = getOfficialMessageId(sendMessage);
 
+        const templateBody = await buildTemplateBody(
+          schedule.templateMetaId,
+          schedule.templateComponents,
+          templateName,
+          ticket
+        );
+
         await ticket.update({
-          lastMessage: schedule.body || `📋 Template: ${templateName}`,
+          lastMessage: schedule.body || templateBody,
           imported: null,
           unreadMessages: 0,
           fromMe: true
@@ -616,7 +624,7 @@ async function handleSendScheduledMessage(job) {
           wid: officialMessageId,
           ticketId: ticket.id,
           contactId: schedule.contact.id,
-          body: schedule.body || `📋 Template: ${templateName}`,
+          body: schedule.body || templateBody,
           fromMe: true,
           mediaType: "template",
           mediaUrl: null,
@@ -875,7 +883,12 @@ async function handleSendScheduledMessage(job) {
             to: formattedNumber
           };
           mediaType = "template";
-          bodyTicket = `📋 Template: ${templateName}`;
+          bodyTicket = await buildTemplateBody(
+            schedule.templateMetaId,
+            schedule.templateComponents,
+            templateName,
+            ticket
+          );
         } else {
           // ✅ Texto livre na API Oficial (não é template)
           logger.info(`💬 [SCHEDULE-QUEUE] TEXTO LIVRE VIA API OFICIAL`);

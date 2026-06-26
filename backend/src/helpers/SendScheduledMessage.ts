@@ -15,6 +15,7 @@ import path from "path";
 import fs from "fs";
 import logger from "../utils/logger";
 import SafeCreateMessage from "./SafeCreateMessage";
+import { buildTemplateBody } from "./BuildTemplateBody";
 
 interface SendScheduledMessageParams {
   schedule: Schedule;
@@ -102,7 +103,12 @@ const SendScheduledMessage = async ({
           }
         };
         mediaType = "template";
-        bodyTicket = `📋 Template: ${templateName}`;
+        bodyTicket = await buildTemplateBody(
+          schedule.templateMetaId,
+          schedule.templateComponents,
+          templateName,
+          ticket
+        );
 
         logger.info(`✅ [SCHEDULE] Payload do template:`, JSON.stringify(payload, null, 2));
       } else {

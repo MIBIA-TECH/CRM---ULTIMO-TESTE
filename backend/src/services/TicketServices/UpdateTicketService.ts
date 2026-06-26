@@ -111,7 +111,7 @@ const UpdateTicketService = async ({
       motivoFinalizacao,
       finalizadoComVenda
     } = ticketData;
-    let isBot: boolean | null = ticketData.isBot || false;
+    let isBot: boolean | null = ticketData.isBot !== undefined ? ticketData.isBot : null;
     let queueOptionId: number | null = ticketData.queueOptionId || null;
 
     const io = getIO();
@@ -123,6 +123,10 @@ const UpdateTicketService = async ({
     });
 
     let ticket = await ShowTicketService(ticketId, companyId);
+
+    if (isBot === null) {
+      isBot = ticket.isBot;
+    }
 
     // Regra de segurança: em transferência em massa para atendente,
     // o ticket deve sempre ficar aberto, independente de checkbox.

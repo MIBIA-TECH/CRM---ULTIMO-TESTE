@@ -18,6 +18,7 @@ import ChatIcon from "@material-ui/icons/Chat";
 import CloudDownloadIcon from "@material-ui/icons/GetApp";
 import SignalCellularConnectedNoInternet0BarIcon from "@material-ui/icons/SignalCellularConnectedNoInternet0Bar";
 import api from "../../services/api";
+import AudioModal from "../../components/AudioModal";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -111,6 +112,11 @@ const useStyles = makeStyles((theme) => ({
     wordBreak: "break-word",
     boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
   },
+  audioMessage: {
+    minWidth: "300px",
+    maxWidth: "380px",
+    width: "100%"
+  },
   sent: {
     alignSelf: "flex-end",
     backgroundColor: "#e3f2fd",
@@ -138,8 +144,17 @@ const useStyles = makeStyles((theme) => ({
   },
   mediaAudio: {
     width: "100%",
+    height: "40px",
     marginTop: theme.spacing(0.5),
-    outline: "none"
+    outline: "none",
+    border: "none",
+    backgroundColor: "transparent",
+    "&::-webkit-media-controls-panel": {
+      backgroundColor: "transparent",
+    },
+    "&::-webkit-media-controls-current-time-display, &::-webkit-media-controls-time-remaining-display": {
+      fontSize: "12px"
+    }
   },
   mediaDoc: {
     display: "flex",
@@ -348,6 +363,18 @@ const WebChatPublic = () => {
     }
   };
 
+  const isAudioMessage = (msg) => {
+    if (!msg) return false;
+    if (msg.mediaType === "audio") return true;
+    if (msg.mediaType && msg.mediaType.startsWith("audio/")) return true;
+    if (msg.mediaUrl) {
+      const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.webm'];
+      const url = msg.mediaUrl.toLowerCase();
+      return audioExtensions.some(ext => url.includes(ext));
+    }
+    return false;
+  };
+
   const renderMedia = (msg) => {
     if (!msg.mediaUrl) return null;
 
@@ -362,14 +389,13 @@ const WebChatPublic = () => {
       );
     }
 
-    if (msg.mediaType === "audio" || (msg.mediaType && msg.mediaType.startsWith("audio/"))) {
+    if (isAudioMessage(msg)) {
       return (
-        <audio controls className={classes.mediaAudio}>
-          <source src={msg.mediaUrl} type="audio/ogg" />
-          <source src={msg.mediaUrl} type="audio/mpeg" />
-          <source src={msg.mediaUrl} type="audio/wav" />
-          Seu navegador não suporta player de áudio.
-        </audio>
+        <AudioModal
+          url={msg.mediaUrl}
+          message={msg}
+          disableTranscription={true}
+        />
       );
     }
 
@@ -447,7 +473,9 @@ const WebChatPublic = () => {
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`${classes.message} ${msg.fromMe ? classes.received : classes.sent}`}
+                  className={`${classes.message} ${msg.fromMe ? classes.received : classes.sent} ${
+                    isAudioMessage(msg) ? classes.audioMessage : ""
+                  }`}
                 >
                   {/* Se for apenas texto */}
                   {msg.mediaType === "extendedTextMessage" || !msg.mediaType ? (
@@ -456,7 +484,7 @@ const WebChatPublic = () => {
                     // Se for mídia, renderiza player ou imagem e um subtítulo se houver
                     <>
                       {renderMedia(msg)}
-                      {msg.body && msg.body !== msg.mediaUrl && (
+                      {msg.body && msg.body !== msg.mediaUrl && !isAudioMessage(msg) && (
                         <Typography variant="body2" style={{ marginTop: "4px" }}>
                           {msg.body}
                         </Typography>
@@ -497,20 +525,38 @@ const WebChatPublic = () => {
         </div>
       </Paper>
 
-      {/* Modal para Visualização de Imagem em Tela Cheia */}
-      <Dialog
-        open={Boolean(selectedImage)}
-        onClose={() => setSelectedImage(null)}
-        maxWidth="md"
-      >
-        <DialogContent style={{ padding: 0, overflow: "hidden" }}>
+      {/* Modal Customizado para Visualização de Imagem em Tela Cheia (Lightbox) */}
+      {selectedImage && (
+        <div
+          onClick={() => setSelectedImage(null)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "rgba(0, 0, 0, 0.9)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 99999,
+            cursor: "zoom-out"
+          }}
+        >
           <img
             src={selectedImage}
             alt="Imagem expandida"
-            style={{ width: "100%", height: "auto", display: "block" }}
+            style={{ 
+              maxWidth: "95vw", 
+              maxHeight: "95vh", 
+              objectFit: "contain",
+              display: "block",
+              borderRadius: "4px",
+              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5)"
+            }}
           />
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 };

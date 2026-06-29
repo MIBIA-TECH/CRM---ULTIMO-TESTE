@@ -104,7 +104,8 @@ const GetContactMediaService = async ({
     // Se a URL não começa com http, significa que é um caminho relativo
     if (fullMediaUrl && !fullMediaUrl.startsWith('http')) {
       const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
-      const proxyPort = process.env.PROXY_PORT ? `:${process.env.PROXY_PORT}` : '';
+      const hasPort = backendUrl.split(":").length > 2;
+      const proxyPort = process.env.PROXY_PORT && !hasPort ? `:${process.env.PROXY_PORT}` : '';
       
       // Se a URL já contém /public/company, não adicionar novamente
       if (fullMediaUrl.startsWith('/public/company')) {

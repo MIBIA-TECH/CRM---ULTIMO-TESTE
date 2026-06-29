@@ -12,21 +12,19 @@ export function TagsContainer({ contact }) {
     const isMounted = useRef(true);
 
     useEffect(() => {
-        return () => {
-            isMounted.current = false
-        }
-    }, [])
-
-    useEffect(() => {
-        if (isMounted.current) {
-            loadTags().then(() => {
+        isMounted.current = true;
+        loadTags().then(() => {
+            if (isMounted.current) {
                 if (Array.isArray(contact.tags)) {
                     setSelecteds(contact.tags);
                 } else {
                     setSelecteds([]);
                 }
-            });
-        }
+            }
+        });
+        return () => {
+            isMounted.current = false;
+        };
     }, [contact]);
 
     const createTag = async (data) => {
@@ -41,9 +39,11 @@ export function TagsContainer({ contact }) {
     const loadTags = async () => {
         try {
             const { data } = await api.get(`/tags/list`, 
-            {params: { kanban: 0}
-        });
-            setTags(data);
+                {params: { kanban: 0}
+            });
+            if (isMounted.current) {
+                setTags(data);
+            }
         } catch (err) {
             toastError(err);
         }

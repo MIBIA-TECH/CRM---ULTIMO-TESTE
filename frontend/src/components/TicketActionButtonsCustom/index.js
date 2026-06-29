@@ -109,7 +109,7 @@ const TicketActionButtonsCustom = ({
     setAcceptTicketWithouSelectQueueOpen,
   ] = useState(false);
   const [showTicketLogOpen, setShowTicketLogOpen] = useState(false);
-  const [disableBot, setDisableBot] = useState(ticket.contact.disableBot);
+  const [disableBot, setDisableBot] = useState(contact?.disableBot || false);
 
   const [showSchedules, setShowSchedules] = useState(false);
   const [enableIntegration, setEnableIntegration] = useState(
@@ -169,7 +169,7 @@ const TicketActionButtonsCustom = ({
     const planConfigs = await getPlanCompany(undefined, companyId);
     if (isMounted.current) {
       setShowSchedules(planConfigs.plan.useSchedules);
-      setDisableBot(ticket.contact.disableBot);
+      setDisableBot(contact?.disableBot || false);
       setShowTicketLogOpen(false);
     }
   };
@@ -286,7 +286,7 @@ const TicketActionButtonsCustom = ({
     if (setting?.requiredTag === "enabled") {
       //verificar se tem uma tag
       try {
-        const contactTags = await api.get(`/contactTags/${ticket.contact.id}`);
+        const contactTags = await api.get(`/contactTags/${contact?.id}`);
         if (!contactTags.data.tags) {
           toast.warning(i18n.t("messagesList.header.buttons.requiredTag"));
         } else {
@@ -380,11 +380,14 @@ const TicketActionButtonsCustom = ({
   };
 
   const handleContactToggleDisableBot = async () => {
-    const { id } = ticket.contact;
+    const id = contact?.id;
+    if (!id) return;
 
     try {
       const { data } = await api.put(`/contacts/toggleDisableBot/${id}`);
-      ticket.contact.disableBot = data.disableBot;
+      if (contact) {
+        contact.disableBot = data.disableBot;
+      }
       setDisableBot(data.disableBot);
     } catch (err) {
       toastError(err);
@@ -808,8 +811,7 @@ const TicketActionButtonsCustom = ({
 
               {/* Botão de vincular à carteira só aparece se NÃO houver carteira vinculada E se a configuração DirectTicketsToWallets estiver ativa */}
               {directTicketsToWallets && !(
-                ticket.contact?.contactWallets &&
-                ticket.contact.contactWallets.length > 0
+                contact?.contactWallets?.length > 0
               ) && (
                 <IconButton
                   className={classes.bottomButtonVisibilityIcon}

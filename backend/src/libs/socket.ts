@@ -9,6 +9,7 @@ import { JwtPayload, verify } from "jsonwebtoken";
 import authConfig from "../config/auth";
 import BirthdayService from "../services/BirthdayService/BirthdayService";
 import SyncCampaignShippingMetaStatusService from "../services/CampaignService/SyncCampaignShippingMetaStatusService";
+import { initWebChatSocket } from "./webchatSocket";
 
 let io: SocketIO;
 
@@ -468,6 +469,10 @@ export const initIO = (httpServer: Server): SocketIO => {
     });
 
   });
+
+  // Inicializar o socket do WebChat
+  initWebChatSocket(io);
+
   return io;
 };
 

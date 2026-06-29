@@ -1,0 +1,115 @@
+# Canal de Chat via WebSockets (WebChat) - Exclusivo para Cliente Timbre
+
+Implementação de um canal de atendimento ao vivo (Live Chat) direto via WebSockets no CRM. O cliente final (solicitante) se comunicará por meio de uma página/widget web (e futuramente via App Android), e o atendente responderá diretamente pelo painel de tickets atual do CRM.
+
+> [!IMPORTANT]
+> **Escopo Restrito (Cliente Timbre):**
+> Esta funcionalidade é exclusiva para o cliente **Timbre** (empresas com `companyId = 6` - "Timbre Seleção" e `companyId = 2` - "Timbre"). A arquitetura será isolada para que outras empresas inquilinas do SaaS não tenham acesso nem consigam ativar este canal.
+
+---
+
+## Decisões de Arquitetura e Negócio
+
+### 1. Isolamento de WebSockets (Segurança)
+*   **O que é:** Criar um namespace separado no Socket.io (ex: `/webchat-client`) dedicado exclusivamente aos visitantes do site/app.
+*   **Para que serve:** 
+    *   **Segurança:** Impede que um visitante externo consiga ouvir eventos do painel de administração (como atualizações de tickets de outras empresas, dados de outros atendentes ou chats internos).
+    *   **Simplicidade:** O código do widget web ou do aplicativo Android se conecta apenas a esse canal limpo, escutando apenas os eventos da própria conversa (`client-message`), sem tráfego desnecessário.
+
+### 2. Restrição de Tenant (Multi-tenant Protection)
+*   **Bloqueio no Backend (WebSocket):** O namespace `/webchat-client` validará a conexão no handshake. Se a conexão tentar abrir um canal de WebChat para uma empresa que não seja do grupo Timbre (`companyId !== 6` e `companyId !== 2`), a conexão será rejeitada imediatamente com erro de autenticação/permissão.
+*   **Bloqueio no CRM (Frontend):** O botão para configurar a conexão WebChat ou visualizar tickets deste canal só será renderizado na interface se o atendente logado pertencer à empresa Timbre (verificando o `companyId` no estado global da aplicação).
+*   **Prática de Clean Architecture:** Essa regra de negócio de restrição será concentrada em um Helper ou Middleware do backend, facilitando a liberação da funcionalidade para outros clientes no futuro caso necessário (basta atualizar a lista de empresas permitidas no middleware ou criar uma flag no plano da empresa).
+
+### 3. Autenticação e Fluxo de Identificação (Foco na IA e App Android)
+*   **Primeiro Contato (Anônimo):** O chat iniciará de forma totalmente anônima. O cliente final receberá um `visitor_uuid` gerado e salvo no seu `localStorage` (ou no storage do App Android). No banco de dados, criaremos um contato temporário com o nome `Visitante Web [Últimos 4 dígitos do UUID]`.
+*   **Compatibilidade com IA e Integração (Fase Posterior):** A arquitetura deixará o campo de CPF e Data de Nascimento no model `Contact` preparados. Quando a IA/Flowbuilder solicitar o CPF e a data de nascimento e o usuário responder, a IA invocará um serviço de busca e vinculará/mesclará o ticket temporário ao contato real do cliente no banco.
+*   **Compatibilidade Mobile:** A conexão WebSocket será feita via padrão clássico do Socket.io, permitindo que o App Android se conecte nativamente usando bibliotecas Socket.io oficiais para Android/Flutter/React Native.
+
+### 4. Experiência Unificada do Atendente (Mesma Tela / CRM)
+*   **Painel Centralizado:** Para o atendente/operador da Timbre, o atendimento do WebChat ocorrerá **exatamente na mesma tela** de atendimentos (`/tickets`) usada hoje para WhatsApp, Facebook e Instagram.
+*   **Fila de Entrada:** Os tickets de WebChat cairão na mesma barra lateral (Aguardando / Abertos), podendo ser transferidos, devolvidos à fila ou resolvidos da mesma forma.
+*   **Uso Transparente:** O atendente digita no mesmo campo de texto e envia. O sistema detectará automaticamente que o ticket é do canal `"webchat"` e fará a entrega por WebSockets, mantendo a experiência do atendente 100% inalterada.
+
+### 5. Paridade de Funcionalidades do WhatsApp (Templates, Mídias e Botões)
+*   **Templates e Respostas Rápidas:** Quando o atendente envia uma resposta rápida ou template (com variáveis como `{nome}` substituídas), a mensagem é processada no backend e o texto final é enviado via WebSocket para o cliente.
+*   **Mensagens Interativas (Botões/Listas):** Se um fluxo de bot ou template oficial enviar botões interativos, o JSON contendo os botões é emitido pelo WebSocket. O widget do cliente (ou app) renderizará esses botões na tela e, ao clicar, enviará a resposta como mensagem de volta.
+*   **Envio de Mídias (Imagens, Vídeos, Documentos e Áudios):** O atendente continuará enviando arquivos normalmente. O backend salvará os arquivos na pasta `public/` (gerando uma URL pública) e enviará o tipo de mídia e a URL via WebSocket para o widget do cliente renderizar (ex: player de áudio para gravador de voz, imagem em miniatura, etc.).
+
+---
+
+## Proposed Changes
+
+### [Backend - Banco de Dados e Models]
+Ajustes nos modelos para suportar o canal `"webchat"`.
+
+#### [MODIFY] [Ticket.ts](file:///home/deploy/mibiadigital/backend/src/models/Ticket.ts)
+* Aceitar `"webchat"` como valor no campo `channel`.
+
+#### [MODIFY] [Whatsapp.ts](file:///home/deploy/mibiadigital/backend/src/models/Whatsapp.ts)
+* Permitir conexões com provedor `"webchat"` para gerenciar as configurações do canal web (mensagem de saudação, fora do expediente, e amarração com filas/fluxos).
+
+---
+
+### [Backend - WebSocket e Roteamento de Mensagens]
+Configuração da comunicação em tempo real externa e escutas no fluxo de mensagens.
+
+#### [NEW] [webchatSocket.ts](file:///home/deploy/mibiadigital/backend/src/libs/webchatSocket.ts)
+* Criar e inicializar o namespace `/webchat-client` no servidor Socket.io.
+* **Validação de Tenant (Timbre):** Verificar se o `companyId` no query parameter do handshake corresponde a 6 (Timbre Seleção) ou 2 (Timbre). Se não, desconectar.
+* Gerenciar conexão de visitantes usando tokens de sessão ou UUIDs.
+* Colocar conexões de visitantes em salas (rooms) baseadas no `ticket.uuid` ou `contact.uuid`.
+* Ouvir evento `message` enviado pelo visitante e invocar o serviço de recebimento de mensagens do WebChat.
+
+#### [NEW] [ReceiveWebChatMessageService.ts](file:///home/deploy/mibiadigital/backend/src/services/WebChatServices/ReceiveWebChatMessageService.ts)
+* Receber a mensagem do WebSocket do visitante.
+* Localizar ou criar o `Contact` (inicialmente `Visitante Web [UUID]`) e o `Ticket` (com `channel: "webchat"`).
+* Salvar a mensagem no banco usando `CreateMessageService` (com `fromMe: false`), o que notificará automaticamente o painel de atendimento do CRM.
+
+#### [MODIFY] [CreateMessageService.ts](file:///home/deploy/mibiadigital/backend/src/services/MessageServices/CreateMessageService.ts)
+* Interceptar a criação de qualquer mensagem com `fromMe: true` (ou originada por bot/IA) vinculada a um ticket do tipo `"webchat"`.
+* Emitir o evento de WebSocket correspondente no namespace `/webchat-client` para atualizar a tela do visitante final em tempo real.
+* Suportar o envio de propriedades adicionais (como URL da mídia, tipo de mídia, ou opções de botões no JSON) na emissão do socket para o cliente.
+
+#### [MODIFY] [MessageController.ts](file:///home/deploy/mibiadigital/backend/src/controllers/MessageController.ts)
+* Ajustar o método `store` para que, se `ticket.channel === "webchat"`, salve a mensagem via `CreateMessageService` diretamente (sem tentar chamar APIs do WhatsApp/Meta/Baileys).
+
+---
+
+### [Frontend - CRM do Atendente]
+Ajustes na visualização do operador para diferenciar o canal.
+
+#### [MODIFY] [TicketListItem.js](file:///home/deploy/mibiadigital/frontend/src/components/TicketListItem/index.js)
+* **Verificação de Visibilidade:** Renderizar o ícone correspondente quando o canal for `"webchat"` e ocultar menus de configuração de WebChat para outras empresas (deixando ativo apenas para atendentes com `companyId === 6` ou `companyId === 2`).
+
+#### [MODIFY] [MessageInput.js](file:///home/deploy/mibiadigital/frontend/src/components/MessageInput/index.js)
+* Garantir que o input de mensagem funcione para o canal `"webchat"`, ocultando regras específicas de WhatsApp (ex: janela de 24h).
+
+---
+
+### [Frontend - Widget do Visitante (Simulador)]
+Interface simples para validação do chat em tempo real.
+
+#### [NEW] [index.html](file:///home/deploy/mibiadigital/backend/public/webchat-test/index.html)
+* Página HTML estática servida pelo backend na rota pública `/webchat-test/` contendo uma caixa de conversa básica.
+* Carrega `socket.io-client`.
+* Conecta com `companyId` correspondente à Timbre.
+* Gera e salva um `visitor_uuid` no `localStorage` na primeira execução.
+* Permite enviar mensagens de texto e exibe as respostas do atendente em tempo real.
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. **Ativar o canal WebChat:** Criar um registro no banco de dados correspondente à conexão WebChat vinculando-a à empresa Timbre Seleção (id: 6) ou Timbre (id: 2).
+2. **Conexão do Solicitante:** Acessar a página de testes pública `/webchat-test/index.html`.
+3. **Fluxo de Mensagem 1 (Cliente -> Atendente):**
+   - Enviar uma mensagem pelo chat de teste.
+   - Verificar se o ticket aparece como "Aguardando" no painel do atendente da Timbre.
+   - Verificar se o atendente recebe a mensagem em tempo real.
+4. **Fluxo de Mensagem 2 (Atendente -> Cliente):**
+   - O atendente aceita o ticket e responde pelo CRM.
+   - Verificar se a mensagem aparece instantaneamente no chat de teste do cliente.
+5. **Persistência de Sessão:** Recarregar o chat de teste e validar se o histórico da conversa e a conexão permanecem ativos.
+6. **Segurança (Outras empresas):** Tentar conectar ao WebSocket do WebChat usando `companyId = 5` (MIBIA Digital) e validar se a conexão é rejeitada pelo backend.

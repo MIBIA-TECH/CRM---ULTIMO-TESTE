@@ -562,7 +562,7 @@ const MessageInput = ({
     if (ticketStatus !== "open" && ticketStatus !== "group") return true; // Ticket fechado
 
     // Para canais Meta (Facebook/Instagram/WhatsApp Oficial), bloquear se janela expirou
-    const isMetaChannel = ticketChannel && ticketChannel !== "whatsapp";
+    const isMetaChannel = ticketChannel && ticketChannel !== "whatsapp" && ticketChannel !== "webchat";
     if (isMetaChannel && is24HourWindowExpired) {
       return true;
     }
@@ -1436,7 +1436,7 @@ const MessageInput = ({
     const isFlowProcessing = flowProcessingRef.current || flowProcessing;
 
     // Se janela de 24h expirou mas é API Oficial, permite abrir menu (para templates)
-    const isMetaChannel = ticketChannel && ticketChannel !== "whatsapp";
+    const isMetaChannel = ticketChannel && ticketChannel !== "whatsapp" && ticketChannel !== "webchat";
     if (isMetaChannel && is24HourWindowExpired && useWhatsappOfficial) {
       return loading || recording || isFlowProcessing; // Só bloqueia se loading/recording
     }

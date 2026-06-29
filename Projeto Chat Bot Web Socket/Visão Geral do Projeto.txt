@@ -1,0 +1,23 @@
+Processo novo da implementação do chat bot com IA.... 
+
+1- Clonar o repositorio, pegar o backup do banco atual, criar nova branch.
+
+2- Devemos implementar um chat com as mesmas funcionalidades existentes no sistema, porem no sistema atual, estamos usando a api da meta, a ideia é que nesse chat
+faremos uma comunicação via web socket, mas contendo as mesmas funcionalidades do chat com api do whats... Então vamos fazer um processo de engenharia reversa do projeto atual, para conter as mesmas funcionalidades, 
+mas primeiramente começar pelo apenas com chat simples de conversa entre o usuario antendente, e o usuario solicitante (cliente). 
+
+
+3- no fluxo, teremos 2 tipos de usuarios, os atendentes que devem receber as mensagens, como é feito no processo atual, e os solicitantes (clientes) que entram em contato 
+para tirar duvidas, ou resolver problemas, etc... Então temos que seguir nessa linha... 
+
+
+DEIXAR EXPLÍCITO NO PLANO QUE VAMOS FAZER ISSO PARA O CLIENTE TIMBRE!
+
+----------
+
+Passos para depois:  
+
+- Implementar uma IA para esse chat web socket, contendo o fluxo ja existente no sistema (fluxo do flowbuilder da timbre), vamos baixar em .json aquele arquivo do fluxo e em vez de ser umn fluxo, vamos colocar a IA para fazer isso. Temos que ver uma maneira também
+de quando for feito uma mudança no flowbuilder a nossa IA puxar também, pois esses fluxos são mudados com frequencia... Então se eles mudrem algo no fluxo deles, temos que puxar também para a nossa IA.
+
+- Após o chat via web socket ser implementado, vamos criar uma aplicação edm flutter ou em alguma linguagem mobile para android, para os usuarios (solicitantes entrarem em contato, para não precisarem usar o link do chat web).

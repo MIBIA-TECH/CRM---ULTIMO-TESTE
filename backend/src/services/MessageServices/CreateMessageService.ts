@@ -179,6 +179,22 @@ const CreateMessageService = async ({
       });
   }
 
+  // Se for canal webchat, enviar para a sala do visitante no namespace correspondente
+  if (message.ticket && message.ticket.channel === "webchat") {
+    const webchatIo = io.of("/webchat-client");
+    webchatIo.to(`visitor-${message.ticket.contact.number}`).emit("message", {
+      action: "create",
+      message: {
+        id: message.id,
+        body: message.body,
+        fromMe: message.fromMe,
+        createdAt: message.createdAt,
+        mediaType: message.mediaType,
+        mediaUrl: message.mediaUrl
+      }
+    });
+  }
+
   return message;
 };
 

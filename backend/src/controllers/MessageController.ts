@@ -212,8 +212,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     throw new AppError("Este ticket não possui conexão vinculada, provavelmente foi excluída a conexão.", 400);
   }
 
-  // ✅ VERIFICAÇÃO: Janela de 24h para API Oficial (não se aplica a mensagens privadas)
-  if (isPrivate === "false") {
+  // ✅ VERIFICAÇÃO: Janela de 24h para API Oficial (não se aplica a mensagens privadas nem ao WebChat)
+  if (isPrivate === "false" && ticket.channel !== "webchat") {
     const check24h = await CheckApiOficial24hWindow(ticket);
 
     if (check24h.isOficial) {
@@ -294,6 +294,27 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
                 isForwarded: false
               });
             }
+          }
+
+          if (ticket.channel === "webchat") {
+            const messageData = {
+              wid: `WBC_${Date.now()}_${index}_${Math.random().toString(36).substring(2, 7)}`,
+              ticketId: ticket.id,
+              contactId: undefined,
+              body: media.originalname,
+              fromMe: true,
+              mediaType: isAudioFile(media) ? 'audio' : media.mimetype.split('/')[0],
+              mediaUrl: media.filename,
+              read: true,
+              quotedMsgId: null,
+              ack: 2,
+              remoteJid: ticket.contact?.remoteJid || "",
+              participant: null,
+              dataJson: null,
+              ticketTrakingId: null,
+              isPrivate: isPrivate === "true"
+            };
+            await CreateMessageService({ messageData, companyId: ticket.companyId });
           }
 
           if (["facebook", "instagram"].includes(ticket.channel)) {
@@ -383,6 +404,25 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
         if (ticket.channel === "facebook") {
           await verifyMessageFace(sendText, body, ticket, ticket.contact, true);
         }
+      } else if (ticket.channel === "webchat" && isPrivate === "false") {
+        const messageData = {
+          wid: `WBC_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          ticketId: ticket.id,
+          contactId: undefined,
+          body,
+          fromMe: true,
+          mediaType: !isNil(vCard) ? 'contactMessage' : 'extendedTextMessage',
+          read: true,
+          quotedMsgId: null,
+          ack: 2,
+          remoteJid: ticket.contact?.remoteJid || "",
+          participant: null,
+          dataJson: null,
+          ticketTrakingId: null,
+          isPrivate: false
+        };
+
+        await CreateMessageService({ messageData, companyId: ticket.companyId });
       }
     }
     return res.send();

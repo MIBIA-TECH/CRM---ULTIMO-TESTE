@@ -20,13 +20,15 @@ const useStyles = makeStyles((theme) => ({
     border: 'none'
   },
   audioPlayerContainer: {
-    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
     width: '100%',
     height: '40px', // ✅ Altura fixa
-    marginBottom: theme.spacing(1)
+    marginBottom: theme.spacing(1),
+    gap: theme.spacing(1)
   },
   audioPlayer: {
-    width: '100%',
+    flex: 1,
     height: '40px', // ✅ Altura específica
     outline: 'none',
     border: 'none',
@@ -73,25 +75,25 @@ const useStyles = makeStyles((theme) => ({
     alignSelf: 'center'
   },
   rateButton: {
-    position: 'absolute',
-    top: '2px',
-    right: '8px',
-    fontSize: '0.7rem',
-    minWidth: 'auto',
-    padding: '1px 6px',
-    height: '18px',
+    fontSize: '0.75rem',
+    fontWeight: 'bold',
+    width: '35px',
+    height: '24px',
     backgroundColor: 'rgba(0,0,0,0.6)',
     color: 'white',
-    borderRadius: '9px',
-    zIndex: 10,
+    borderRadius: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    border: 'none',
+    outline: 'none',
+    padding: 0,
     lineHeight: 1,
+    flexShrink: 0,
     '&:hover': {
       backgroundColor: 'rgba(0,0,0,0.8)'
-    },
-    // ✅ Remover estilos de botão padrão
-    border: 'none',
-    textTransform: 'none',
-    boxShadow: 'none'
+    }
   }
 }));
 
@@ -201,14 +203,12 @@ const AudioModal = ({ url, message, disableTranscription = false }) => {
         
         {/* ✅ Botão de velocidade igual ao original */}
         {showButtonRate && (
-          <Button
+          <button
             className={classes.rateButton}
             onClick={toggleRate}
-            size="small"
-            disableRipple
           >
             {audioRate}x
-          </Button>
+          </button>
         )}
       </div>
 

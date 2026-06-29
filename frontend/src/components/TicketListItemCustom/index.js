@@ -32,7 +32,7 @@ import ShowTicketOpen from "../ShowTicketOpenModal";
 import FinalizacaoVendaModal from "../FinalizacaoVendaModal";
 import { isNil } from "lodash";
 import { toast } from "react-toastify";
-import { Done, HighlightOff, Replay, SwapHoriz } from "@material-ui/icons";
+import { Done, HighlightOff, Replay, SwapHoriz, Mic } from "@material-ui/icons";
 import VisibilityIcon from "@material-ui/icons/Visibility"; // Ícone de spy
 import useCompanySettings from "../../hooks/useSettings/companySettings";
 import {
@@ -538,6 +538,23 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
 
     if (ticketPreviewText.includes("BEGIN:VCARD")) {
       return <MarkdownWrapper>Contato</MarkdownWrapper>;
+    }
+
+    // Identificar se a última mensagem é de áudio (seja por extensão de arquivo ou texto indicador)
+    const lowerText = ticketPreviewText.toLowerCase();
+    const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.webm'];
+    const isAudio = audioExtensions.some(ext => lowerText.endsWith(ext)) ||
+                    lowerText === "audio" ||
+                    lowerText.includes("audio_") ||
+                    lowerText.includes("áudio gravado") ||
+                    lowerText.includes("mensagem de voz");
+
+    if (isAudio) {
+      return (
+        <MarkdownWrapper>
+          📎 audio
+        </MarkdownWrapper>
+      );
     }
 
     return (

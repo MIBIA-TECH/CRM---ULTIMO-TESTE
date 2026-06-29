@@ -15,7 +15,11 @@ let io: SocketIO;
 export const initIO = (httpServer: Server): SocketIO => {
   io = new SocketIO(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL
+      origin: [
+        process.env.FRONTEND_URL,
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+      ]
     },
     // ✅ CORREÇÃO: Aumentar limite de tamanho de mensagem para suportar arquivos grandes
     // Padrão é 1MB, mas PDFs de 1MB viram ~1.3MB em base64

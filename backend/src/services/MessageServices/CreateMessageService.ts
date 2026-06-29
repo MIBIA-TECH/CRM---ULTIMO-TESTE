@@ -111,6 +111,17 @@ const CreateMessageService = async ({
     console.log(`[CREATE MESSAGE] ➕ Nova mensagem criada ${correctedMessageData.wid}`);
   }
 
+  // Atualizar lastMessage e fromMe no Ticket correspondente no banco
+  await Ticket.update(
+    {
+      lastMessage: correctedMessageData.body,
+      fromMe: correctedMessageData.fromMe
+    },
+    {
+      where: { id: correctedMessageData.ticketId }
+    }
+  );
+
   const message = await Message.findOne({
     where: {
       wid: correctedMessageData.wid,

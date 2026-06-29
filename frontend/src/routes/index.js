@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { BrowserRouter, Switch } from "react-router-dom";
+import { BrowserRouter, Switch, Route as RouterRoute } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
+import WebChatPublic from "../pages/WebChatPublic";
 
 import LoggedInLayout from "../layout";
 import Dashboard from "../pages/Dashboard/";
@@ -67,6 +68,7 @@ const Routes = () => {
       <AuthProvider>
         <TicketsContextProvider>
           <Switch>
+            <RouterRoute exact path="/webchat/:companyId" component={WebChatPublic} />
             <Route exact path="/login" component={Login} />
             <Route exact path="/signup" component={Signup} />
             <WhatsAppsProvider>

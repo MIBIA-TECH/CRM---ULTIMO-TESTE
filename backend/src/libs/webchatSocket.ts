@@ -1,6 +1,9 @@
 import { Server as SocketIO, Socket } from "socket.io";
 import logger from "../utils/logger";
 import ReceiveWebChatMessageService from "../services/WebChatServices/ReceiveWebChatMessageService";
+import Contact from "../models/Contact";
+import Ticket from "../models/Ticket";
+import Message from "../models/Message";
 
 export const initWebChatSocket = (io: SocketIO): void => {
   const nsp = io.of("/webchat-client");
@@ -30,6 +33,53 @@ export const initWebChatSocket = (io: SocketIO): void => {
     const roomName = `visitor-${visitorUuid}`;
     socket.join(roomName);
     logger.info(`WebChat Visitor ${visitorUuid} joined room: ${roomName}`);
+
+    // Buscar histórico de mensagens anterior se houver
+    (async () => {
+      try {
+        const contact = await Contact.findOne({
+          where: {
+            companyId: Number(companyId),
+            number: String(visitorUuid)
+          }
+        });
+
+        if (contact) {
+          const ticket = await Ticket.findOne({
+            where: {
+              contactId: contact.id,
+              companyId: Number(companyId),
+              channel: "webchat"
+            },
+            order: [["id", "DESC"]]
+          });
+
+          if (ticket) {
+            const messages = await Message.findAll({
+              where: {
+                ticketId: ticket.id,
+                companyId: Number(companyId)
+              },
+              order: [["id", "ASC"]]
+            });
+
+            // Emitir o histórico para o cliente conectado
+            socket.emit("history", messages.map(m => ({
+              id: m.id,
+              body: m.body,
+              fromMe: m.fromMe,
+              createdAt: m.createdAt,
+              mediaType: m.mediaType,
+              mediaUrl: m.mediaUrl
+            })));
+            
+            logger.info(`Emitted ${messages.length} messages from history for visitorUuid=${visitorUuid}`);
+          }
+        }
+      } catch (err: any) {
+        logger.error(`Error loading history for visitorUuid=${visitorUuid}: ${err.message}`);
+      }
+    })();
 
     // Ouvinte para mensagens enviadas pelo visitante
     socket.on("message", async (data: { body: string }, callback?: (response: any) => void) => {

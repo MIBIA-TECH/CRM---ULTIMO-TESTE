@@ -173,6 +173,12 @@ const ContactListItems = () => {
         dispatch({ type: "RESET" });
         dispatch({ type: "LOAD_CONTACTS", payload: data.records });
       }
+
+      if (data.action === "validation-complete") {
+        toast.success("Validação de números finalizada! Os contatos da lista estão prontos e validados para o envio das campanhas.");
+        dispatch({ type: "RESET" });
+        dispatch({ type: "LOAD_CONTACTS", payload: data.records });
+      }
     }
     
     // Evento genérico de contatos
@@ -227,7 +233,9 @@ const ContactListItems = () => {
         method: "POST",
         data: formData,
       });
-      toast.success(`${data.length} contato(s) importado(s) com sucesso!`);
+      toast.success(
+        `${data.length} contatos importados com sucesso! A validação de números com o WhatsApp está sendo executada. Aguarde o aviso de conclusão para iniciar os disparos.`
+      );
     } catch (err) {
       toastError(err);
     }

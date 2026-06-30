@@ -19,6 +19,7 @@ import CloudDownloadIcon from "@material-ui/icons/GetApp";
 import SignalCellularConnectedNoInternet0BarIcon from "@material-ui/icons/SignalCellularConnectedNoInternet0Bar";
 import api from "../../services/api";
 import AudioModal from "../../components/AudioModal";
+import MarkdownWrapper from "../../components/MarkdownWrapper";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -110,7 +111,11 @@ const useStyles = makeStyles((theme) => ({
     lineHeight: 1.4,
     position: "relative",
     wordBreak: "break-word",
-    boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+    boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+    "& a": {
+      color: "#1976d2",
+      textDecoration: "underline"
+    }
   },
   audioMessage: {
     minWidth: "300px",
@@ -479,14 +484,16 @@ const WebChatPublic = () => {
                 >
                   {/* Se for apenas texto */}
                   {msg.mediaType === "extendedTextMessage" || !msg.mediaType ? (
-                    <Typography variant="body2">{msg.body}</Typography>
+                    <Typography variant="body2">
+                      <MarkdownWrapper>{msg.body}</MarkdownWrapper>
+                    </Typography>
                   ) : (
                     // Se for mídia, renderiza player ou imagem e um subtítulo se houver
                     <>
                       {renderMedia(msg)}
                       {msg.body && msg.body !== msg.mediaUrl && !isAudioMessage(msg) && (
                         <Typography variant="body2" style={{ marginTop: "4px" }}>
-                          {msg.body}
+                          <MarkdownWrapper>{msg.body}</MarkdownWrapper>
                         </Typography>
                       )}
                     </>

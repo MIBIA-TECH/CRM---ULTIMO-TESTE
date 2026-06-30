@@ -204,7 +204,13 @@ export async function ImportContacts(
       records: contactList
     });
 
-  logger.info(`[ImportContacts] Evento de reload emitido para o frontend`);
+  io.of(String(companyId))
+    .emit(`company-${companyId}-ContactListItem-${+contactListId}`, {
+      action: "validation-complete",
+      records: contactList
+    });
+
+  logger.info(`[ImportContacts] Eventos de reload e validation-complete emitidos para o frontend`);
 
   return contactList;
 }

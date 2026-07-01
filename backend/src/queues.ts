@@ -2025,8 +2025,40 @@ async function handleProcessCampaign(job) {
       return;
     }
 
-    if (isArray(contacts)) {
-      const contactData = contacts.map(contact => ({
+    //  OTIMIZAÇÃO: Filtrar apenas os contatos que ainda não foram processados
+    const isTagCampaign = !!(campaign.tagListId && !campaign.contactListId);
+    const shippings = await CampaignShipping.findAll({
+      where: { campaignId: campaign.id }
+    });
+
+    const completedIdentifiers = new Set<string>();
+
+    for (const shipping of shippings) {
+      if (shipping.deliveredAt !== null || shipping.sentAt !== null || shipping.failedAt !== null) {
+        if (isTagCampaign) {
+          if (shipping.number) completedIdentifiers.add(shipping.number);
+        } else {
+          if (shipping.contactId) completedIdentifiers.add(String(shipping.contactId));
+        }
+      }
+    }
+
+    const eligibleContacts = contacts.filter(contact => {
+      const identifier = isTagCampaign ? contact.number : String(contact.id);
+      return !completedIdentifiers.has(identifier);
+    });
+
+    if (!eligibleContacts.length) {
+      logger.info(`[RDS-Campaign] Campanha ${campaign.id} - Todos os contatos já foram processados. Finalizando.`);
+      await campaign.update({
+        status: "FINALIZADA",
+        completedAt: moment()
+      });
+      return;
+    }
+
+    if (isArray(eligibleContacts)) {
+      const contactData = eligibleContacts.map(contact => ({
         contactId: contact.id,
         campaignId: campaign.id,
         variables: settings.variables,
@@ -2222,6 +2254,8 @@ async function handlePrepareContact(job) {
     if (
       !created &&
       record.deliveredAt === null &&
+      record.sentAt === null &&
+      record.failedAt === null &&
       record.confirmationRequestedAt === null
     ) {
       record.set(campaignShipping);
@@ -2230,6 +2264,8 @@ async function handlePrepareContact(job) {
 
     if (
       record.deliveredAt === null &&
+      record.sentAt === null &&
+      record.failedAt === null &&
       record.confirmationRequestedAt === null
     ) {
       const nextJob = await campaignQueue.add(
